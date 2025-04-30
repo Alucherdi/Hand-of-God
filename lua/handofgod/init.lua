@@ -1,16 +1,5 @@
 local M = {}
 
-local function split(inputstr, sep)
-    if sep == nil then
-        sep = "%s"
-    end
-    local t = {}
-    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
-        table.insert(t, str)
-    end
-    return t
-end
-
 local function gen_list()
     local files = {}
     local directories = {}
@@ -42,6 +31,7 @@ function M.create_window()
     local list = vim.tbl_extend('keep', items.directories, items.files)
 
     M.buffer = vim.api.nvim_create_buf(false, true)
+    M.host = vim.api.nvim_get_current_win()
 
     vim.api.nvim_buf_set_lines(M.buffer, 0, 1, false, list)
 
@@ -56,6 +46,13 @@ function M.create_window()
 end
 
 function M:open()
+    local line = vim.api.nvim_get_current_line()
+
+    vim.api.nvim_set_current_win(M.host)
+    vim.cmd("edit " .. vim.fn.expand(line))
+    vim.api.nvim_win_close(M.window, true)
+
+    vim.api.nvim_buf_delete(M.buffer, { force = true })
 end
 
 return M
