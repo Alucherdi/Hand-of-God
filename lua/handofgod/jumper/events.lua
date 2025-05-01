@@ -1,3 +1,5 @@
+local M = {}
+
 local datapath = vim.fn.stdpath('data') .. '/hog/'
 local cwd = string.gsub(vim.uv.cwd() or '', '/', '_')
 local cursorfile = datapath .. cwd .. '__cursors'
@@ -14,20 +16,28 @@ local function get_cursors()
     return vim.json.decode(content)
 end
 
-local cursors = get_cursors()
+M.cursors = get_cursors()
 
-local function save_cursors()
+function M.save_cursors()
     local file = io.open(cursorfile, 'w')
     if not file then return end
-    file:write(vim.json.encode(cursors))
+    file:write(vim.json.encode(M.cursors))
     file:close()
+end
+
+function M.clean_cursors(list)
+    for _, v in ipairs(list) do
+        M.cursors[v] = nil
+    end
 end
 
 
 vim.api.nvim_create_autocmd("BufEnter", {
     callback = function(args)
         local file = vim.api.nvim_buf_get_name(args.buf)
-        local cursor = cursors[file]
+        file = vim.fn.fnamemodify(file, ':.')
+
+        local cursor = M.cursors[file]
         if not cursor then return end
 
         vim.api.nvim_win_set_cursor(0, cursor)
@@ -37,8 +47,27 @@ vim.api.nvim_create_autocmd("BufEnter", {
 vim.api.nvim_create_autocmd("BufLeave", {
     callback = function(args)
         local file = vim.api.nvim_buf_get_name(args.buf)
+        file = vim.fn.fnamemodify(file, ':.')
+
+        if vim.trim(file) == '' then return end
+
         local cursor = vim.api.nvim_win_get_cursor(0)
-        cursors[file] = cursor
-        save_cursors()
+        M.cursors[file] = cursor
+        M.save_cursors()
     end
 })
+
+vim.api.nvim_create_autocmd("VimLeavePre", {
+    callback = function(_)
+        local file = vim.api.nvim_buf_get_name(
+            vim.api.nvim_get_current_buf())
+        file = vim.fn.fnamemodify(file, ':.')
+
+        if vim.trim(file) == '' then return end
+        local cursor = vim.api.nvim_win_get_cursor(0)
+        M.cursors[file] = cursor
+        M.save_cursors()
+    end
+})
+
+return M
