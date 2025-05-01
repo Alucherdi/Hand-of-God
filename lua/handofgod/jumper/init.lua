@@ -7,7 +7,7 @@ local M = {
     current = ''
 }
 
-function M.load()
+function M.setup()
     M.list = data.read()
 end
 
@@ -55,5 +55,4 @@ function M.explore()
     end, { buffer = buf })
 end
 
-M.load()
 return M
