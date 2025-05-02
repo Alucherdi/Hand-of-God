@@ -19,7 +19,7 @@ function M.load()
     local content = file:read('*a')
     file:close()
 
-    M.list = vim.json.decode(content)
+    pcall(function() M.list = vim.json.decode(content) end)
 end
 
 function M.write()
