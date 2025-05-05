@@ -1,5 +1,6 @@
 local utils = require('handofgod.utils')
 local data = require('handofgod.data')
+local commons = require('handofgod.commons')
 
 local M = { current = '' }
 
@@ -33,22 +34,10 @@ function M.explore()
     local buf = vim.api.nvim_create_buf(false, true)
 
     vim.api.nvim_buf_set_lines(buf, 0, 1, false, data.get_files())
-    local window = vim.api.nvim_open_win(buf, true, {
-        relative = 'editor',
-        height = 12, width = 64,
-        row = 0, col = 0
-    })
+    local window = commons:create_window('Jumper', buf)
 
     vim.keymap.set('n', 'q', function()
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-        --[[
-        local diff = utils.get_diff(M.list, lines)
-
-        if #diff > 0 then
-            events.clean_cursors(diff)
-            events.save_cursors()
-        end
-        ]]--
 
         M.rewrite(lines)
         vim.api.nvim_win_close(window, true)
