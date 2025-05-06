@@ -1,5 +1,6 @@
 local M = {}
 
+
 function M.remove_empties(tbl)
     for i, v in pairs(tbl) do
         if vim.trim(v) == '' then
