@@ -5,7 +5,6 @@ local commons = require('handofgod.commons')
 local M = { current = '' }
 
 function M.setup()
-    print('being setup')
     data.load()
 end
 

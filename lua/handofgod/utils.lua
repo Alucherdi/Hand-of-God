@@ -17,7 +17,7 @@ function M.get_diff(a, b)
 
     local diff = {}
     for _, v in ipairs(a) do
-        if not b_set[v] then
+        if not b_set[v] and vim.trim(v) ~= '' then
             table.insert(diff, v)
         end
     end
