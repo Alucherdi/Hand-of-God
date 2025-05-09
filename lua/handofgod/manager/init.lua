@@ -1,5 +1,6 @@
 local commons = require('handofgod.commons')
 local utils   = require('handofgod.utils')
+
 local M = {}
 
 local function gen_list(path)
