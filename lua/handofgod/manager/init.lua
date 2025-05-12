@@ -98,7 +98,7 @@ end
 
 function M:edit(path)
     vim.api.nvim_set_current_win(M.host)
-    vim.cmd("edit " .. vim.fn.expand(path))
+    vim.cmd("edit " .. vim.fn.fnamemodify(vim.fn.expand(path), ':.'))
 end
 
 return M
