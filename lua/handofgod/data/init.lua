@@ -50,7 +50,10 @@ function M.reorder_based_on(list)
     M.list = {}
 
     for _, item in ipairs(list) do
-        table.insert(M.list, {key = item, cursor = map[item].cursor or { 1, 0 }})
+        local cursor = { 1, 0 }
+        local map_i = map[item]
+        if map_i and map_i.cursor then cursor = map_i.cursor end
+        table.insert(M.list, {key = item, cursor = cursor})
     end
 end
 

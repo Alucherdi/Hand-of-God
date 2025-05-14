@@ -24,4 +24,12 @@ function M.get_diff(a, b)
     return diff
 end
 
+function M.includes(tbl, value)
+    for _, v in ipairs(tbl) do
+        if v == value then return true end
+    end
+
+    return false
+end
+
 return M

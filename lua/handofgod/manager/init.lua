@@ -1,34 +1,57 @@
 local commons = require('handofgod.commons')
 local utils   = require('handofgod.utils')
 
-local M = {}
+local M = {
+    ignore = {}
+}
+
+local function gen_title(path)
+    local title = vim.fn.fnamemodify(path, ':.')
+    if title == vim.uv.cwd() then
+        title = './'
+    end
+    return title
+end
+
+local function close(win, buf)
+    vim.api.nvim_win_close(win, true)
+    vim.api.nvim_buf_delete(buf, { force = true })
+end
 
 local function gen_list(path)
     local files = {}
-
     M.bufferPath = path or vim.fn.expand('%:p:h')
 
     local hidden = vim.fn.globpath(M.bufferPath, '.*', false, true)
     local normal = vim.fn.globpath(M.bufferPath, '*', false, true)
     local list = vim.list_extend(normal, hidden)
 
-
     for _, item in pairs(list) do
-        local stat = vim.loop.fs_stat(item)
         local rel = vim.fn.fnamemodify(item, ':t')
+
+        if utils.includes(M.ignore, rel) then goto skip end
         if rel == '.' or rel == '..' then goto skip end
 
-        if stat then
-            if stat.type == 'directory' then
-                table.insert(files, 1, rel .. '/')
-            else
-                table.insert(files, rel)
-            end
+        local stat = vim.loop.fs_stat(item)
+        if not stat then goto skip end
+
+        if stat.type == 'directory' then
+            table.insert(files, 1, rel .. '/')
+        else
+            table.insert(files, rel)
         end
+
         ::skip::
     end
 
     return files
+end
+
+--- Filters a list of strings based on input
+-- @param config table: The search query
+-- field config.ignore table: List of path names to ignore
+function M:setup(config)
+    vim.tbl_extend('force', config)
 end
 
 function M:open()
@@ -39,42 +62,29 @@ function M:open()
     local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, list)
 
-    local title = vim.fn.fnamemodify(M.bufferPath, ':.')
-
-    if title == vim.uv.cwd() then
-        title = './'
-    end
-
     local window = commons:create_window(
-        title,
+        gen_title(M.bufferPath),
         buf)
 
     vim.keymap.set('n', '<BS>', function()
         list = gen_list(vim.fn.fnamemodify(M.bufferPath, ':h'))
-        local title = vim.fn.fnamemodify(M.bufferPath, ':.')
-        if title == vim.uv.cwd() then
-            title = './'
-        end
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, list)
-        vim.api.nvim_win_set_config(window, {title = title})
+        vim.api.nvim_win_set_config(window, {title = gen_title(M.bufferPath)})
     end)
 
-    vim.keymap.set('n', '<leader>u', function()
+    vim.keymap.set('n', 'q', function()
         local lines = vim.api.nvim_buf_get_lines(
             vim.api.nvim_get_current_buf(), 0, -1, false)
 
         local additions = utils.get_diff(lines, list)
         local subtraction = utils.get_diff(list, lines)
         self:manage(additions, subtraction)
-
+        close(window, buf)
     end, { buffer = buf })
 
-    for _, k in ipairs({'<Esc>', 'q'}) do
-        vim.keymap.set('n', k, function()
-            vim.api.nvim_win_close(window, true)
-            vim.api.nvim_buf_delete(buf, { force = true })
-        end, { buffer = buf })
-    end
+    vim.keymap.set('n', '<Esc>', function()
+        close(window, buf)
+    end, { buffer = buf })
 
     vim.keymap.set('n', '<CR>', function()
         local row = vim.api.nvim_win_get_cursor(0)[1]
@@ -84,8 +94,7 @@ function M:open()
             self:goto(line, buf, window)
         else
             self:edit(M.bufferPath .. '/' .. line)
-            vim.api.nvim_win_close(window, true)
-            vim.api.nvim_buf_delete(buf, { force = true })
+            close(window, buf)
         end
     end, { buffer = buf })
 end
@@ -105,13 +114,9 @@ end
 
 function M:goto(path, buf, window)
     local list = gen_list(M.bufferPath .. '/' .. path:sub(0, -2))
-    local title = vim.fn.fnamemodify(M.bufferPath, ':.')
-    if title == vim.uv.cwd() then
-        title = './'
-    end
 
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, list)
-    vim.api.nvim_win_set_config(window, {title = title})
+    vim.api.nvim_win_set_config(window, {title = gen_title(M.bufferPath)})
 end
 
 function M:edit(path)

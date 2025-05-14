@@ -3,12 +3,27 @@ local command = 'fd -c never -tf'
 local M = {
     index = 1,
     selected = ''
-
 }
+
+local function close(win, buf)
+    vim.api.nvim_win_close(win, true)
+    vim.api.nvim_buf_delete(buf, { force = true })
+end
+
+--- Set configuration parameters to searcher module
+-- @param config table: The search query
+-- field config.ignore table: List of path names to ignore
+function M:setup(config)
+    M.ignore = config.ignore or {}
+
+    for _, v in ipairs(M.ignore) do
+        command = command .. ' -E ' .. v
+    end
+end
 
 function M:match_to(line)
     local list = {}
-    for i, v in ipairs(self.list) do
+    for _, v in ipairs(self.list) do
         if v:match(line) then
             table.insert(list, v)
         end
@@ -70,25 +85,20 @@ local function create_prompt(target)
     })
 
     vim.keymap.set('n', 'q', function()
-        vim.api.nvim_win_close(win, true)
-        vim.api.nvim_buf_delete(buf, { force = true })
+        close(win, buf)
     end, {buffer = buf})
 
 
     vim.keymap.set('i', '<Esc>', function()
-        vim.api.nvim_win_close(win, true)
-        vim.api.nvim_buf_delete(buf, { force = true })
+        close(win, buf)
     end, {buffer = buf})
 
     vim.keymap.set('n', '<Esc>', function()
-        vim.api.nvim_win_close(win, true)
-        vim.api.nvim_buf_delete(buf, { force = true })
+        close(win, buf)
     end, {buffer = buf})
 
     vim.keymap.set('i', '<CR>', function()
-        vim.api.nvim_win_close(win, true)
-        vim.api.nvim_buf_delete(buf, { force = true })
-
+        close(win, buf)
         M:edit(M.selected)
     end, {buffer = buf})
 
