@@ -1,6 +1,8 @@
 local commons = require('handofgod.commons')
 local utils   = require('handofgod.utils')
 
+local data = require('handofgod.data')
+
 local M = {
     ignore = {}
 }
@@ -108,7 +110,15 @@ function M:manage(additions, subtractions)
     end
 
     for _, path in ipairs(subtractions) do
-        vim.fn.delete(M.bufferPath .. '/' .. path)
+        local result = vim.fn.delete(M.bufferPath .. '/' .. path)
+
+        if result == 0 then
+            local relative = vim.fn.fnamemodify(M.bufferPath, ':.') .. '/' .. path
+            local index = utils.index_of(data.list, relative, 'key')
+            if index ~= -1 then
+                data.list[index] = nil
+            end
+        end
     end
 end
 
