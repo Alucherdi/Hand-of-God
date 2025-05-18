@@ -68,13 +68,13 @@ function M:open()
         gen_title(M.bufferPath),
         buf)
 
-    vim.keymap.set('n', '<BS>', function()
+    utils.kmap('n', '<BS>', function()
         list = gen_list(vim.fn.fnamemodify(M.bufferPath, ':h'))
         vim.api.nvim_buf_set_lines(buf, 0, -1, false, list)
         vim.api.nvim_win_set_config(window, {title = gen_title(M.bufferPath)})
     end)
 
-    vim.keymap.set('n', 'q', function()
+    utils.kmap('n', {'<Esc>', 'q'}, function()
         local lines = vim.api.nvim_buf_get_lines(
             vim.api.nvim_get_current_buf(), 0, -1, false)
 
@@ -84,11 +84,7 @@ function M:open()
         close(window, buf)
     end, { buffer = buf })
 
-    vim.keymap.set('n', '<Esc>', function()
-        close(window, buf)
-    end, { buffer = buf })
-
-    vim.keymap.set('n', '<CR>', function()
+    utils.kmap('n', '<CR>', function()
         local row = vim.api.nvim_win_get_cursor(0)[1]
         local line = vim.api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
 

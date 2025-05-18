@@ -35,16 +35,7 @@ function M.explore()
     vim.api.nvim_buf_set_lines(buf, 0, 1, false, data.get_files())
     local window = commons:create_window('Jumper', buf)
 
-    vim.keymap.set('n', 'q', function()
-        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-
-        M.rewrite(lines)
-        vim.api.nvim_win_close(window, true)
-        vim.api.nvim_buf_delete(buf, { force = true })
-
-    end, { buffer = buf })
-
-    vim.keymap.set('n', '<Esc>', function()
+    utils.kmap('n', {'<Esc>', 'q'}, function()
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
         M.rewrite(lines)

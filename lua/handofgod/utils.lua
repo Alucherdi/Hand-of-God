@@ -1,5 +1,16 @@
 local M = {}
 
+function M.kmap(mode, hotkey, func, config)
+    local hktype = type(hotkey)
+    if hktype == 'string' then
+        vim.keymap.set(mode, hotkey, func, config or {})
+    elseif hktype == 'table' then
+        for _, hk in ipairs(hotkey) do
+            vim.keymap.set(mode, hk, func, config or {})
+        end
+    end
+end
+
 function M.remove_empties(tbl)
     for i, v in pairs(tbl) do
         if vim.trim(v) == '' then
