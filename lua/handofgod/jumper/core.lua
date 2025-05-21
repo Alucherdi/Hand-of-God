@@ -2,7 +2,7 @@ local utils = require('handofgod.utils')
 local data = require('handofgod.data')
 local commons = require('handofgod.commons')
 
-local M = { current = '' }
+local M = { }
 
 function M.setup()
     data.load()
@@ -17,9 +17,8 @@ function M.jump_to(index)
     if element == nil then return end
 
     local path = element.key
-    if path == M.current then return end
+    if path == vim.fn.expand('%') then return end
 
-    M.current = path
     vim.cmd('edit ' .. vim.fn.expand(path))
 end
 

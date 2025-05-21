@@ -95,6 +95,34 @@ function M:open()
             close(window, buf)
         end
     end, { buffer = buf })
+
+    utils.kmap('n', '<leader>rn', function()
+        local row = vim.api.nvim_win_get_cursor(0)[1]
+        local line = vim.api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
+
+        local rnbuf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(rnbuf, 0, -1, false, {line})
+
+        local rnwin = commons:create_window('Rename', rnbuf, {
+            style = 'minimal',
+            width = #line + 8, height = 1,
+            row = 1, col = #line - 1
+        })
+
+        utils.kmap('n', 'q', function()
+            local rnline = vim.api.nvim_buf_get_lines(rnbuf, 0, 1, false)[1]
+            print(M.bufferPath .. '/' .. rnline)
+
+            vim.fn.rename(
+                M.bufferPath .. '/' .. line,
+                M.bufferPath .. '/' .. rnline
+            )
+
+            vim.api.nvim_buf_set_lines(buf, 0, -1, false, gen_list(M.bufferPath))
+            close(rnwin, rnbuf)
+        end, {buffer=rnbuf})
+
+    end, {buffer = buf})
 end
 
 function M:manage(additions, subtractions)
