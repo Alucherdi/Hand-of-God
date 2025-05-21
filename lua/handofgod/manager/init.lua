@@ -75,13 +75,17 @@ function M:open()
     end)
 
     utils.kmap('n', {'<Esc>', 'q'}, function()
+        close(window, buf)
+    end, { buffer = buf })
+
+    utils.kmap('n', '<leader>w', function()
         local lines = vim.api.nvim_buf_get_lines(
             vim.api.nvim_get_current_buf(), 0, -1, false)
 
         local additions = utils.get_diff(lines, list)
         local subtraction = utils.get_diff(list, lines)
         self:manage(additions, subtraction)
-        close(window, buf)
+        print('Saved :)')
     end, { buffer = buf })
 
     utils.kmap('n', '<CR>', function()
@@ -106,7 +110,7 @@ function M:open()
         local rnwin = commons:create_window('Rename', rnbuf, {
             style = 'minimal',
             width = #line + 8, height = 1,
-            row = 1, col = #line - 1
+            row = 1, col = 1
         })
 
         utils.kmap('n', 'q', function()

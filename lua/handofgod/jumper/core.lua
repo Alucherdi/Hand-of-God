@@ -9,7 +9,10 @@ function M.setup()
 end
 
 function M.add()
-    data.add(vim.fn.expand('%'))
+    local path = vim.fn.expand('%')
+    if not path then return end
+
+    data.add(path)
 end
 
 function M.jump_to(index)
