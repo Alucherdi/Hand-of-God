@@ -3,6 +3,8 @@ local utils   = require('handofgod.utils')
 
 local data = require('handofgod.data')
 
+local ns = vim.api.nvim_create_namespace("HOGManagerHL")
+
 local M = {
     ignore = {}
 }
@@ -16,8 +18,9 @@ local function gen_title(path)
 end
 
 local function close(win, buf)
-    vim.api.nvim_win_close(win, true)
-    vim.api.nvim_buf_delete(buf, { force = true })
+    if win then vim.api.nvim_win_close(win, true) end
+
+    if buf then vim.api.nvim_buf_delete(buf, { force = true }) end
 end
 
 local function gen_list(path)
@@ -61,8 +64,50 @@ function M:open()
 
         local additions = utils.get_diff(lines, actual)
         local subtraction = utils.get_diff(actual, lines)
-        self:manage(additions, subtraction)
-        print('Saved :)')
+
+        local savetext = utils.list_merge(additions, subtraction)
+        local savebuf = vim.api.nvim_create_buf(false, true)
+        vim.api.nvim_buf_set_lines(savebuf, 0, -1, false, savetext)
+
+        vim.bo[savebuf].buftype = 'nofile'
+        vim.bo[savebuf].bufhidden = 'wipe'
+        vim.bo[savebuf].modifiable = false
+        vim.bo[savebuf].swapfile = false
+
+        if #additions > 0 then
+            vim.api.nvim_buf_set_extmark(savebuf, ns, 0, 0, {
+                end_row = #additions,
+                hl_group = "DiffAdd",
+            })
+        end
+
+        if #subtraction > 0 then
+            vim.api.nvim_buf_set_extmark(savebuf, ns, #additions, 0, {
+                end_row = #additions + #subtraction,
+                hl_group = "DiffDelete",
+            })
+        end
+
+        local savewin = commons:create_window('Save? y/n', savebuf, {
+            style = 'minimal',
+            width = 20, height = #savetext,
+            row = 1, col = 1
+        })
+
+        utils.kmap('n', 'h', function()
+            print(#subtraction)
+        end, {buffer = savebuf})
+
+        utils.kmap('n', 'y', function()
+            self:manage(additions, subtraction)
+            close(savewin, nil)
+            print('Saved :)')
+        end, {buffer = savebuf, nowait = true, noremap = true})
+
+        utils.kmap('n', 'n', function()
+            close(savewin, nil)
+        end, {buffer = savebuf, nowait = true, noremap = true})
+
     end, { buffer = buf })
 
     utils.kmap('n', '<CR>', function()
