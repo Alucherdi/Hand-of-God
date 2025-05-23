@@ -57,9 +57,10 @@ function M:open()
     utils.kmap('n', '<leader>w', function()
         local lines = vim.api.nvim_buf_get_lines(
             vim.api.nvim_get_current_buf(), 0, -1, false)
+        local actual = gen_list(M.bufferPath)
 
-        local additions = utils.get_diff(lines, list)
-        local subtraction = utils.get_diff(list, lines)
+        local additions = utils.get_diff(lines, actual)
+        local subtraction = utils.get_diff(actual, lines)
         self:manage(additions, subtraction)
         print('Saved :)')
     end, { buffer = buf })
