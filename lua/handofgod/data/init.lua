@@ -1,3 +1,4 @@
+local utils = require('handofgod.utils')
 local M = {
     datapath = vim.fn.stdpath('data') .. '/hog/',
     basename = string.gsub(vim.uv.cwd() or '', '/', '_'),
@@ -83,6 +84,34 @@ function M.get_files()
     local files = {}
     for _, item in ipairs(M.list) do
         table.insert(files, item.key)
+    end
+
+    return files
+end
+
+function M.ls(path, ignore)
+    local files = {}
+
+    local hidden = vim.fn.globpath(path, '.*', false, true)
+    local normal = vim.fn.globpath(path, '*', false, true)
+    local list = vim.list_extend(normal, hidden)
+
+    for _, item in pairs(list) do
+        local rel = vim.fn.fnamemodify(item, ':t')
+
+        if utils.includes(ignore, rel) then goto skip end
+        if rel == '.' or rel == '..' then goto skip end
+
+        local stat = vim.loop.fs_stat(item)
+        if not stat then goto skip end
+
+        if stat.type == 'directory' then
+            table.insert(files, 1, rel .. '/')
+        else
+            table.insert(files, rel)
+        end
+
+        ::skip::
     end
 
     return files

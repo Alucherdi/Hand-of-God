@@ -21,32 +21,8 @@ local function close(win, buf)
 end
 
 local function gen_list(path)
-    local files = {}
     M.bufferPath = path or vim.fn.expand('%:p:h')
-
-    local hidden = vim.fn.globpath(M.bufferPath, '.*', false, true)
-    local normal = vim.fn.globpath(M.bufferPath, '*', false, true)
-    local list = vim.list_extend(normal, hidden)
-
-    for _, item in pairs(list) do
-        local rel = vim.fn.fnamemodify(item, ':t')
-
-        if utils.includes(M.ignore, rel) then goto skip end
-        if rel == '.' or rel == '..' then goto skip end
-
-        local stat = vim.loop.fs_stat(item)
-        if not stat then goto skip end
-
-        if stat.type == 'directory' then
-            table.insert(files, 1, rel .. '/')
-        else
-            table.insert(files, rel)
-        end
-
-        ::skip::
-    end
-
-    return files
+    return data.ls(M.bufferPath, M.ignore)
 end
 
 --- Filters a list of strings based on input
