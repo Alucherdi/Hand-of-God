@@ -18,10 +18,6 @@ function M.spawn(additions, deletions, confirmation_callback)
         row = 1, col = 1
     })
 
-    utils.kmap('n', 'h', function()
-        print(#deletions)
-    end, {buffer = buf})
-
     utils.kmap('n', 'y', function()
         confirmation_callback()
         vim.api.nvim_win_close(win, true)
