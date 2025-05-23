@@ -138,7 +138,7 @@ function M:manage(additions, subtractions)
     end
 
     for _, path in ipairs(subtractions) do
-        local result = vim.fn.delete(M.bufferPath .. '/' .. path)
+        local result = vim.fn.delete(M.bufferPath .. '/' .. path, 'rf')
 
         if result == 0 then
             local relative = vim.fn.fnamemodify(M.bufferPath, ':.') .. '/' .. path
