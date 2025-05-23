@@ -55,7 +55,7 @@ function M.index_of(tbl, value, key)
     return -1
 end
 
-function M.list_merge(t1, t2)
+function M.merge_list(t1, t2)
   local result = {}
   for _, v in ipairs(t1) do table.insert(result, v) end
   for _, v in ipairs(t2) do table.insert(result, v) end
