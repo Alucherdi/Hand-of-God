@@ -10,7 +10,9 @@ local M = {
     config = {
         ignore = {},
         write_on_exit = true
-    }
+    },
+
+    is_active = false,
 }
 
 local function gen_title(path)
@@ -36,6 +38,9 @@ function M:setup(config)
 end
 
 function M:open()
+    if self.is_active then return end
+    self.is_active = true
+
     M.host = vim.api.nvim_get_current_win()
 
     local list = gen_list()
@@ -85,6 +90,13 @@ function M:open()
         rename_window.spawn(line, M.bufferPath .. '/',
             function() vim.api.nvim_buf_set_lines(main.buf, 0, -1, false, gen_list(M.bufferPath)) end)
     end, {buffer = main.buf})
+
+    vim.api.nvim_create_autocmd("BufLeave", {
+        buffer = main.buf,
+        callback = function(_)
+            self.is_active = false
+        end
+    })
 end
 
 function M.manage(additions, subtractions)
@@ -124,12 +136,13 @@ function M:write()
     local lines = vim.api.nvim_buf_get_lines(
         vim.api.nvim_get_current_buf(), 0, -1, false)
 
-        local actual = gen_list(self.bufferPath)
-        local additions = utils.get_diff(lines, actual)
-        local deletions = utils.get_diff(actual, lines)
+    local actual = gen_list(self.bufferPath)
+    local additions = utils.get_diff(lines, actual)
+    local deletions = utils.get_diff(actual, lines)
 
-        save_window.spawn(additions, deletions,
-            function() self.manage(additions, deletions) end)
-    end
+    save_window.spawn(additions, deletions,
+        function() self.manage(additions, deletions) end)
+end
+
 
 return M
