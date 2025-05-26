@@ -1,4 +1,5 @@
 local commons = require('handofgod.commons')
+local utils = require('handofgod.utils')
 local mod = require('handofgod.modules')
 local command = 'fd -c never -tf'
 
@@ -46,7 +47,7 @@ local function run_command(cmd)
 end
 
 local function move_cursor_keymaps(target, buf)
-    vim.keymap.set('i', '<C-n>', function()
+    utils.kmap('i', '<C-n>', function()
         M.index = M.index + 1
         local count = #vim.api.nvim_buf_get_lines(target.buf, 0, -1, false)
         if M.index > count then
@@ -57,7 +58,7 @@ local function move_cursor_keymaps(target, buf)
         M.selected = vim.api.nvim_buf_get_lines(target.buf, M.index - 1, M.index, false)[1]
     end, {buffer = buf})
 
-    vim.keymap.set('i', '<C-p>', function()
+    utils.kmap('i', '<C-p>', function()
         M.index = M.index - 1
         if M.index < 1 then
             M.index = 1
@@ -84,19 +85,15 @@ local function create_prompt(target)
         height = 1
     })
 
-    vim.keymap.set('n', 'q', function()
+    utils.kmap('n', {'q', '<Esc>'}, function()
         commons.close(main)
     end, {buffer = main.buf})
 
-    vim.keymap.set('i', '<Esc>', function()
+    utils.kmap('i', '<Esc>', function()
         commons.close(main)
     end, {buffer = main.buf})
 
-    vim.keymap.set('n', '<Esc>', function()
-        commons.close(main)
-    end, {buffer = main.buf})
-
-    vim.keymap.set('i', '<CR>', function()
+    utils.kmap('i', '<CR>', function()
         commons.close(main)
         M:edit(M.selected)
     end, {buffer = main.buf})
