@@ -2,6 +2,8 @@ local utils = require('handofgod.utils')
 local data = require('handofgod.data')
 local commons = require('handofgod.commons')
 
+local mod = require('handofgod.modules')
+
 local M = { }
 
 function M.setup()
@@ -32,19 +34,20 @@ function M.rewrite(lines)
 end
 
 function M.explore()
-    local buf = vim.api.nvim_create_buf(false, true)
+    local main = mod.switch('jumper')
+    if not main then return end
 
-    vim.api.nvim_buf_set_lines(buf, 0, 1, false, data.get_files())
-    local window = commons:create_window('Jumper', buf)
+    main.buf = vim.api.nvim_create_buf(false, true)
+
+    vim.api.nvim_buf_set_lines(main.buf, 0, 1, false, data.get_files())
+    main.win = commons:create_window('Jumper', main.buf)
 
     utils.kmap('n', {'<Esc>', 'q'}, function()
-        local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+        local lines = vim.api.nvim_buf_get_lines(main.buf, 0, -1, false)
 
         M.rewrite(lines)
-        vim.api.nvim_win_close(window, true)
-        vim.api.nvim_buf_delete(buf, { force = true })
-
-    end, { buffer = buf })
+        commons.close(main)
+    end, { buffer = main.buf })
 end
 
 return M

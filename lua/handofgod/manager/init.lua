@@ -5,6 +5,7 @@ local save_window = require('handofgod.manager.save_window')
 local rename_window = require('handofgod.manager.rename_window')
 
 local data = require('handofgod.data')
+local mod = require('handofgod.modules')
 
 local M = {
     config = {
@@ -23,11 +24,6 @@ local function gen_title(path)
     return title
 end
 
-local function close(win, buf)
-    if win then vim.api.nvim_win_close(win, true) end
-    if buf then vim.api.nvim_buf_delete(buf, { force = true }) end
-end
-
 local function gen_list(path)
     M.bufferPath = path or vim.fn.expand('%:p:h')
     return data.ls(M.bufferPath, M.config.ignore)
@@ -38,14 +34,12 @@ function M:setup(config)
 end
 
 function M:open()
-    if self.is_active then return end
-    self.is_active = true
+    local main = mod.switch('manager')
+    if not main then return end
 
     M.host = vim.api.nvim_get_current_win()
-
     local list = gen_list()
 
-    local main = {}
     main.buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_lines(main.buf, 0, -1, false, list)
 
@@ -64,7 +58,7 @@ function M:open()
             self:write()
         end
 
-        close(main.win, main.buf)
+        commons.close(main)
     end, {buffer = main.buf})
 
     utils.kmap('n', '<leader>w', function()
@@ -79,7 +73,7 @@ function M:open()
             self:goto(line, main.buf, main.win)
         else
             self:edit(M.bufferPath .. '/' .. line)
-            close(main.win, main.buf)
+            commons.close(main)
         end
     end, {buffer = main.buf})
 

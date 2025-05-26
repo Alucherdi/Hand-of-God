@@ -23,4 +23,19 @@ function M:create_window(title, buf, options)
     return window
 end
 
+function M.close(mod)
+    if not mod then return end
+    local wv = vim.api.nvim_win_is_valid(mod.win)
+    local bv = vim.api.nvim_buf_is_valid(mod.buf)
+
+    if wv and bv then
+        vim.api.nvim_win_close(mod.win, true)
+        vim.api.nvim_buf_delete(mod.buf, { force = true })
+    end
+
+    mod.win = nil
+    mod.buf = nil
+    mod.is_active = false
+end
+
 return M

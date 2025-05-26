@@ -1,14 +1,11 @@
 local commons = require('handofgod.commons')
+local mod = require('handofgod.modules')
 local command = 'fd -c never -tf'
+
 local M = {
     index = 1,
     selected = ''
 }
-
-local function close(win, buf)
-    vim.api.nvim_win_close(win, true)
-    vim.api.nvim_buf_delete(buf, { force = true })
-end
 
 --- Set configuration parameters to searcher module
 -- @param config table: The search query
@@ -73,11 +70,14 @@ local function move_cursor_keymaps(target, buf)
 end
 
 local function create_prompt(target)
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_set_option_value('buftype', 'prompt', {buf = buf})
-    vim.fn.prompt_setprompt(buf, '')
+    local main = mod.switch('searcher')
+    if not main then return end
 
-    local win = commons:create_window('input', buf, {
+    main.buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_set_option_value('buftype', 'prompt', {buf = main.buf})
+    vim.fn.prompt_setprompt(main.buf, '')
+
+    main.win = commons:create_window('input', main.buf, {
         style = 'minimal',
         row = 13,
         col = 0,
@@ -85,27 +85,26 @@ local function create_prompt(target)
     })
 
     vim.keymap.set('n', 'q', function()
-        close(win, buf)
-    end, {buffer = buf})
-
+        commons.close(main)
+    end, {buffer = main.buf})
 
     vim.keymap.set('i', '<Esc>', function()
-        close(win, buf)
-    end, {buffer = buf})
+        commons.close(main)
+    end, {buffer = main.buf})
 
     vim.keymap.set('n', '<Esc>', function()
-        close(win, buf)
-    end, {buffer = buf})
+        commons.close(main)
+    end, {buffer = main.buf})
 
     vim.keymap.set('i', '<CR>', function()
-        close(win, buf)
+        commons.close(main)
         M:edit(M.selected)
-    end, {buffer = buf})
+    end, {buffer = main.buf})
 
-    move_cursor_keymaps(target, buf)
+    move_cursor_keymaps(target, main.buf)
 
-    vim.api.nvim_create_autocmd('BufLeave', {
-        buffer = buf,
+    vim.api.nvim_create_autocmd('bufLeave', {
+        buffer = main.buf,
         callback = function()
             if vim.api.nvim_win_is_valid(target.win) then
                 vim.api.nvim_win_close(target.win, true)
@@ -114,7 +113,7 @@ local function create_prompt(target)
     })
 
     vim.api.nvim_create_autocmd('TextChangedI', {
-        buffer = buf,
+        buffer = main.buf,
         callback = function(_)
             M.index = 1
             M.selected = vim.api.nvim_buf_get_lines(target.buf, 0, 1, false)[1]
@@ -133,8 +132,6 @@ local function create_prompt(target)
     })
 
     vim.cmd('startinsert')
-
-    return buf, win
 end
 
 
