@@ -8,9 +8,6 @@ local M = {
     selected = ''
 }
 
---- Set configuration parameters to searcher module
--- @param config table: The search query
--- field config.ignore table: List of path names to ignore
 function M:setup(config)
     M.ignore = config.ignore or {}
 
