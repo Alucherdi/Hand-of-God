@@ -26,7 +26,7 @@ function M:edit()
     vim.cmd("edit " .. vim.fn.expand(
         vim.fn.fnamemodify(path, ':.')))
 
-    vim.api.nvim_win_set_cursor(0, {cursor[1], cursor[2]})
+    vim.api.nvim_win_set_cursor(0, {cursor[1], cursor[2] + 1})
 end
 
 local function run_command(cmd)
@@ -37,10 +37,7 @@ local function run_command(cmd)
         matches = {},
     }
 
-    if vim.v.shell_error ~= 0 then
-        print(vim.inspect(output))
-        return result
-    end
+    if vim.v.shell_error ~= 0 then return result end
 
     local splitted = vim.split(output, '\n', {trimempty=true})
 
@@ -50,8 +47,6 @@ local function run_command(cmd)
             local data = json.data
             local match = data.lines.text:gsub('[\n\r]$', '')
 
-            print(vim.inspect(match))
-
             table.insert(result.paths, vim.fn.fnamemodify(data.path.text, ':.'))
             table.insert(result.matches, match)
             table.insert(result.positions, {
@@ -60,13 +55,6 @@ local function run_command(cmd)
                 data.submatches[1]['end'],
             })
         end
-
-        --[[
-        local el = vim.split(v, ':', {trimempty=true})
-        table.insert(result.paths, vim.fn.fnamemodify(el[1], ':.'))
-        table.insert(result.positions, {el[2], el[3]})
-        table.insert(result.matches, el[4])
-        ]]--
     end
 
     return result
