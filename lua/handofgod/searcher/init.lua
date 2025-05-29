@@ -1,25 +1,32 @@
 local commons = require('handofgod.commons')
 local utils = require('handofgod.utils')
 local mod = require('handofgod.modules')
-local command = 'fd -c never -tf'
+local command = 'fd -c never -tf -I'
 
 local M = {
     index = 1,
-    selected = ''
+    selected = '',
+    original = nil,
+    config = {} --[[{
+        contract_on_large_paths = false,
+        ignore = {},
+        caseSensitive = false,
+    }]]--,
 }
 
 function M:setup(config)
-    M.ignore = config.ignore or {}
+    M.config.case_sensitive = config.case_sensitive or false
+    M.config.contract_on_large_paths = config.contract_on_large_paths or false
 
-    for _, v in ipairs(M.ignore) do
+    for _, v in ipairs(config.ignore) do
         command = command .. ' -E ' .. v
     end
 end
 
 function M:match_to(line)
     local list = {}
-    for _, v in ipairs(self.list) do
-        if v:match(line) then
+    for _, v in ipairs(self.original) do
+        if v:lower():match(line:lower()) then
             table.insert(list, v)
         end
     end
@@ -29,14 +36,14 @@ end
 
 function M:edit(path)
     vim.api.nvim_set_current_win(M.host)
-    vim.cmd("edit " .. vim.fn.expand(path))
+    vim.cmd("edit " .. vim.fn.expand(vim.fn.fnamemodify(path, ':.')))
 end
 
-local function run_command(cmd)
-    local output = vim.fn.system(cmd)
+local function get_files()
+    local output = vim.fn.system(command)
 
     if vim.v.shell_error ~= 0 then
-        print("Error running command: " .. cmd)
+        print("Error running command: " .. command)
         return nil
     end
 
@@ -52,7 +59,6 @@ local function move_cursor_keymaps(target, buf)
             return
         end
         vim.api.nvim_win_set_cursor(target.win, {M.index, 0})
-        M.selected = vim.api.nvim_buf_get_lines(target.buf, M.index - 1, M.index, false)[1]
     end, {buffer = buf})
 
     utils.kmap('i', '<C-p>', function()
@@ -62,8 +68,6 @@ local function move_cursor_keymaps(target, buf)
             return
         end
         vim.api.nvim_win_set_cursor(target.win, {M.index, 0})
-        M.selected = vim.api.nvim_buf_get_lines(target.buf, M.index - 1, M.index, false)[1]
-        print(M.selected)
     end, {buffer = buf})
 end
 
@@ -92,7 +96,7 @@ local function create_prompt(target)
 
     utils.kmap('i', '<CR>', function()
         commons.close(main)
-        M:edit(M.selected)
+        M:edit(M.list[M.index])
     end, {buffer = main.buf})
 
     move_cursor_keymaps(target, main.buf)
@@ -110,42 +114,68 @@ local function create_prompt(target)
         buffer = main.buf,
         callback = function(_)
             M.index = 1
-            M.selected = vim.api.nvim_buf_get_lines(target.buf, 0, 1, false)[1]
+
             local row, _ = unpack(vim.api.nvim_win_get_cursor(0))
             local line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
 
             if vim.trim(line) == "" then
-                M.list = run_command(command) or {}
-                vim.api.nvim_buf_set_lines(target.buf, 0, -1, false, M.list)
-                return
+                M.list = M.original
+            else
+                M.list = M:match_to(line)
             end
 
-            local result = M:match_to(line)
-            vim.api.nvim_buf_set_lines(target.buf, 0, -1, false, result)
+            local list = M.list
+            list = M.handle_contraction(list)
+
+            vim.api.nvim_buf_set_lines(target.buf, 0, -1, false, list)
         end
     })
 
     vim.cmd('startinsert')
 end
 
-
 local function create_list()
     M.host = vim.api.nvim_get_current_win()
 
     M.index = 1
-    M.selected = ''
-    M.list = run_command(command) or {}
+    local list = M.list
+    list = M.handle_contraction(list)
+
     local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, M.list)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, list)
 
-    local win  = commons:create_window('Searcher', buf)
+    local win  = commons:create_window('Searcher', buf, {
+        style = 'minimal',
+    })
+    vim.cmd('set cursorline')
 
-    return buf, win
+    return {buf = buf, win = win}
 end
 
 function M:open()
-    local buf, win  = create_list()
-    create_prompt({win = win, buf = buf})
+    M.original = get_files()
+    M.list = M.original
+
+    local list_module = create_list()
+    create_prompt(list_module)
+end
+
+function M.handle_contraction(list)
+    if M.config.contract_on_large_paths then
+        list = utils.map(list, function(v)
+            if #v < 64 then return v end
+
+            local reduced = {}
+            local names = vim.split(v, '/', {trimempty = true})
+            for i = 1, #names - 1 do
+                reduced[i] = names[i]:sub(1, 1)
+            end
+            table.insert(reduced, names[#names])
+            return table.concat(reduced, '/')
+        end)
+    end
+
+    return list
 end
 
 return M

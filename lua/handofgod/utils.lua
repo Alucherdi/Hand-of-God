@@ -62,4 +62,12 @@ function M.merge_list(t1, t2)
   return result
 end
 
+function M.map(list, f)
+    local result = {}
+    for i, v in ipairs(list) do
+        result[i] = f(v)
+    end
+    return result
+end
+
 return M

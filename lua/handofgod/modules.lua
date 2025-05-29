@@ -3,7 +3,8 @@ local M = {
     modules = {
         manager  = {win = nil, buf = nil, is_active = false},
         jumper   = {win = nil, buf = nil, is_active = false},
-        searcher = {win = nil, buf = nil, is_active = false}
+        searcher = {win = nil, buf = nil, is_active = false},
+        finder   = {win = nil, buf = nil, is_active = false}
     }
 }
 
