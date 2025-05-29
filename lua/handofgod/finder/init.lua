@@ -2,6 +2,8 @@ local commons = require('handofgod.commons')
 local utils = require('handofgod.utils')
 local mod = require('handofgod.modules')
 
+local ns = vim.api.nvim_create_namespace("HOGFinderHL")
+
 local command = 'rg --vimgrep '
 
 local M = {
@@ -17,9 +19,14 @@ local M = {
 function M:setup(config)
 end
 
-function M:edit(path)
+function M:edit()
+    local path = M.list.paths[M.index]
+    local cursor = M.list.positions[M.index]
     vim.api.nvim_set_current_win(M.host)
-    vim.cmd("edit " .. vim.fn.expand(path))
+    vim.cmd("edit " .. vim.fn.expand(
+        vim.fn.fnamemodify(path, ':.')))
+
+    vim.api.nvim_win_set_cursor(0, {tonumber(cursor[1]), tonumber(cursor[2])})
 end
 
 local function run_command(cmd)
@@ -38,25 +45,23 @@ local function run_command(cmd)
         local el = vim.split(v, ':', {trimempty=true})
         table.insert(result.paths, vim.fn.fnamemodify(el[1], ':.'))
         table.insert(result.positions, {el[2], el[3]})
-        table.insert(result.matches, vim.trim(el[4]))
+        table.insert(result.matches, el[4])
     end
-    print(vim.inspect(result))
 
     return result
 end
 
-local function move_cursor_keymaps(target, example, buf)
+local function move_cursor_keymaps(list, example, buf)
     utils.kmap('i', '<C-n>', function()
         M.index = M.index + 1
-        local count = #vim.api.nvim_buf_get_lines(target.buf, 0, -1, false)
+        local count = #vim.api.nvim_buf_get_lines(list.buf, 0, -1, false)
         if M.index > count then
             M.index = count
             return
         end
-        vim.api.nvim_win_set_cursor(target.win, {M.index, 0})
+        vim.api.nvim_win_set_cursor(list.win, {M.index, 0})
 
-        vim.api.nvim_buf_set_lines(example.buf, 0, -1, false, {M.list.matches[M.index]})
-        vim.api.nvim_win_set_cursor(example.win, {1, 0})
+        M.draw_example(example.buf, buf)
     end, {buffer = buf})
 
     utils.kmap('i', '<C-p>', function()
@@ -65,14 +70,13 @@ local function move_cursor_keymaps(target, example, buf)
             M.index = 1
             return
         end
-        vim.api.nvim_win_set_cursor(target.win, {M.index, 0})
+        vim.api.nvim_win_set_cursor(list.win, {M.index, 0})
 
-        vim.api.nvim_buf_set_lines(example.buf, 0, -1, false, {M.list.matches[M.index]})
-        vim.api.nvim_win_set_cursor(example.win, {1, 0})
+        M.draw_example(example.buf, buf)
     end, {buffer = buf})
 end
 
-local function create_prompt(target, example)
+local function create_prompt(list, example)
     local main = mod.switch('finder')
     if not main then return end
 
@@ -95,20 +99,18 @@ local function create_prompt(target, example)
         commons.close(main)
     end, {buffer = main.buf})
 
-    --[[
     utils.kmap('i', '<CR>', function()
         commons.close(main)
-        M:edit(M.selected)
+        M:edit()
     end, {buffer = main.buf})
-    ]]--
 
-    move_cursor_keymaps(target, example, main.buf)
+    move_cursor_keymaps(list, example, main.buf)
 
     vim.api.nvim_create_autocmd('bufLeave', {
         buffer = main.buf,
         callback = function()
-            if vim.api.nvim_win_is_valid(target.win) then
-                vim.api.nvim_win_close(target.win, true)
+            if vim.api.nvim_win_is_valid(list.win) then
+                vim.api.nvim_win_close(list.win, true)
             end
 
             if vim.api.nvim_win_is_valid(example.win) then
@@ -127,13 +129,32 @@ local function create_prompt(target, example)
 
             if vim.trim(line) == '' then return end
 
-            local result = run_command(command .. '"' .. line .. '" ' .. vim.uv.cwd())
-            vim.api.nvim_buf_set_lines(target.buf, 0, -1, false, result.paths)
-            vim.api.nvim_buf_set_lines(example.buf, 0, -1, false, {result.matches[M.index]})
+            M.list = run_command(command .. '"' .. line .. '" ' .. vim.uv.cwd())
+
+            vim.api.nvim_buf_set_lines(list.buf, 0, -1, false, M.list.paths)
+            M.draw_example(example.buf, main.buf)
         end
     })
 
     vim.cmd('startinsert')
+end
+
+function M.draw_example(buf, searchbuf)
+    local match = M.list.matches[M.index]
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, {match})
+    if #M.list.positions == 0 then return end
+    local cursor = M.list.positions[M.index]
+    local x = tonumber(cursor[2]) or 0
+    local search = vim.api.nvim_buf_get_lines(searchbuf, 0, 1, false)[1]
+
+    local limit = x + #search - 1
+    if limit > #match then limit = #match end
+
+    vim.api.nvim_buf_set_extmark(buf, ns, 0, x - 1, {
+        end_col = limit,
+        end_row = 0,
+        hl_group = "CurSearch",
+    })
 end
 
 local function create_example()
@@ -142,8 +163,8 @@ local function create_example()
 
     local win  = commons:create_window('', buf, {
         style = 'minimal',
-        width = 20,
-        col = 64,
+        row = 11,
+        height = 2,
     })
     vim.cmd('set cursorline')
 
@@ -160,6 +181,7 @@ local function create_list()
 
     local win  = commons:create_window('Finder', buf, {
         style = 'minimal',
+        height = 10,
     })
     vim.cmd('set cursorline')
 
