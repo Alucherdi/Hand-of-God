@@ -51,7 +51,7 @@ function M:open()
         list = gen_list(vim.fn.fnamemodify(M.bufferPath, ':h'))
         vim.api.nvim_buf_set_lines(main.buf, 0, -1, false, list)
         vim.api.nvim_win_set_config(main.win, {title = gen_title(M.bufferPath)})
-    end)
+    end, {buffer = main.buf})
 
     utils.kmap('n', {'<Esc>', 'q'}, function()
         if self.config.write_on_exit then
