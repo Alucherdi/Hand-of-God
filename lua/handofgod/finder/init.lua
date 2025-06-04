@@ -44,10 +44,14 @@ local function run_command(cmd)
 
     for _, v in ipairs(splitted) do
         local json = vim.json.decode(v)
-        if json.type == 'match' then
-            local data = json.data
-            local match = data.lines.text:gsub('[\n\r]$', '')
+        if json.type ~= 'match' and json.type ~= 'context' then
+            goto skip
+        end
 
+        local data = json.data
+        local match = data.lines.text:gsub('[\n\r]$', '')
+
+        if json.type == 'match' then
             table.insert(result.paths, vim.fn.fnamemodify(data.path.text, ':.'))
             table.insert(result.matches, match)
             table.insert(result.positions, {
@@ -56,6 +60,8 @@ local function run_command(cmd)
                 data.submatches[1]['end'],
             })
         end
+
+        ::skip::
     end
 
     return result
@@ -71,7 +77,7 @@ local function move_cursor_keymaps(list, example, buf)
         end
         vim.api.nvim_win_set_cursor(list.win, {M.index, 0})
 
-        M.draw_example(example.buf)
+        M.draw_example(example)
     end, {buffer = buf})
 
     utils.kmap('i', '<C-p>', function()
@@ -82,7 +88,7 @@ local function move_cursor_keymaps(list, example, buf)
         end
         vim.api.nvim_win_set_cursor(list.win, {M.index, 0})
 
-        M.draw_example(example.buf)
+        M.draw_example(example)
     end, {buffer = buf})
 end
 
@@ -96,7 +102,7 @@ local function create_prompt(list, example)
 
     main.win = commons:create_window('input', main.buf, {
         style = 'minimal',
-        row = 13,
+        row = 15,
         col = 0,
         height = 1
     })
@@ -142,30 +148,36 @@ local function create_prompt(list, example)
             M.list = run_command(command .. '"' .. line .. '" ' .. vim.uv.cwd())
 
             vim.api.nvim_buf_set_lines(list.buf, 0, -1, false, M.list.paths)
-            M.draw_example(example.buf)
+            M.draw_example(example)
         end
     })
 
     vim.cmd('startinsert')
 end
 
-function M.draw_example(buf)
+function M.draw_example(module)
     local match = M.list.matches[M.index]
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, {match})
+    local file = vim.fn.readfile(M.list.paths[M.index])
+    vim.api.nvim_buf_set_lines(module.buf, 0, -1, false, file)
 
     local filetype = ft.detect(M.list.paths[M.index] or '')
-    vim.api.nvim_set_option_value('filetype', filetype, {buf = buf})
+    vim.api.nvim_set_option_value('filetype', filetype, {buf = module.buf})
 
     if #M.list.positions == 0 then return end
     local cursor = M.list.positions[M.index]
 
+    local line = cursor[1] or 1
     local start = cursor[2] or 0
     local ends = cursor[3] or 1
 
+    vim.api.nvim_win_set_cursor(module.win, {line, start})
+    vim.api.nvim_win_call(module.win, function()
+        vim.cmd("normal! zz")
+    end)
 
-    vim.api.nvim_buf_set_extmark(buf, ns, 0, start, {
+    vim.api.nvim_buf_set_extmark(module.buf, ns, line - 1, start, {
         end_col = ends,
-        end_row = 0,
+        end_row = line - 1,
         hl_group = "CurSearch",
     })
 end
@@ -181,7 +193,7 @@ local function create_example()
     local win  = commons:create_window('', buf, {
         style = 'minimal',
         row = 11,
-        height = 2,
+        height = 4,
     })
     vim.cmd('set cursorline')
 
