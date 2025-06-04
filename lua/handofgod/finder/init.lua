@@ -1,6 +1,7 @@
 local commons = require('handofgod.commons')
 local utils = require('handofgod.utils')
 local mod = require('handofgod.modules')
+local ft = require('handofgod.data.filetype')
 
 local ns = vim.api.nvim_create_namespace("HOGFinderHL")
 
@@ -152,13 +153,16 @@ function M.draw_example(buf)
     local match = M.list.matches[M.index]
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, {match})
 
+    local filetype = ft.detect(M.list.paths[M.index] or '')
+    vim.api.nvim_set_option_value('filetype', filetype, {buf = buf})
+
     if #M.list.positions == 0 then return end
     local cursor = M.list.positions[M.index]
 
     local start = cursor[2] or 0
     local ends = cursor[3] or 1
 
-    return
+
     vim.api.nvim_buf_set_extmark(buf, ns, 0, start, {
         end_col = ends,
         end_row = 0,
@@ -168,6 +172,10 @@ end
 
 local function create_example()
     local buf = vim.api.nvim_create_buf(false, true)
+    vim.bo[buf].buftype = 'nofile'
+    vim.bo[buf].bufhidden = 'wipe'
+    vim.bo[buf].swapfile = false
+
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, {})
 
     local win  = commons:create_window('', buf, {
