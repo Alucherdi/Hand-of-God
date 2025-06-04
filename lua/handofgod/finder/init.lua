@@ -55,7 +55,7 @@ local function run_command(cmd)
         end
 
         local data = json.data
-        local match = data.lines.text:gsub('[\n\r]$', '')
+        local match = (data.lines.text or ''):gsub('[\n\r]$', '')
 
         if json.type == 'match' then
             table.insert(result.paths, vim.fn.fnamemodify(data.path.text, ':.'))
