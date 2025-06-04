@@ -14,6 +14,12 @@ local M = {
         paths = {},
         positions = {},
         matches = {},
+    },
+    preview = {
+        cached = {
+            path = '',
+            buf = nil
+        }
     }
 }
 
@@ -156,9 +162,16 @@ local function create_prompt(list, example)
 end
 
 function M.draw_example(module)
-    local match = M.list.matches[M.index]
-    local file = vim.fn.readfile(M.list.paths[M.index])
-    vim.api.nvim_buf_set_lines(module.buf, 0, -1, false, file)
+    local path = M.list.paths[M.index]
+    if not path then return end
+    local cached = M.preview.cached
+
+    if cached.path ~= path or not cached.buf then
+        local file = vim.fn.readfile(M.list.paths[M.index])
+        vim.api.nvim_buf_set_lines(module.buf, 0, -1, false, file)
+        cached.path = path
+        cached.buf = module.buf
+    end
 
     local filetype = ft.detect(M.list.paths[M.index] or '')
     vim.api.nvim_set_option_value('filetype', filetype, {buf = module.buf})
