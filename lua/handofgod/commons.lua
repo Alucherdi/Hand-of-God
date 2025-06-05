@@ -1,4 +1,6 @@
-local M = {}
+local M = {
+    separator = '[HOG_SEP]'
+}
 
 function M:create_window(title, buf, options)
     local default = {
