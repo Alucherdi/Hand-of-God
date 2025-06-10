@@ -46,6 +46,14 @@ function M.gen_prompt_module()
     utils.kmap('i', '<Esc>', function() commons.close(M.prompt) end, {buffer = M.prompt.buf})
     utils.kmap('i', '<C-n>', function() M.move_to(1) end)
     utils.kmap('i', '<C-p>', function() M.move_to(-1) end)
+    utils.kmap('i', '<CR>', function()
+        if #M.list.paths == 0 then return end
+        commons.close(M.prompt)
+        vim.cmd('edit ' .. M.list.paths[M.index])
+        local positions = M.list.positions[M.index]
+        local cursor = {positions[1], positions[2]}
+        vim.api.nvim_win_set_cursor(0, cursor)
+    end, {buffer = M.prompt.buf})
     utils.kmap('i', '<C-y>', function()
         vim.uv.walk(function(handle)
             print(handle:is_active())
@@ -89,6 +97,10 @@ function M.move_to(dir)
     print(M.list.paths[M.index])
 
     vim.api.nvim_win_set_cursor(M.paths.win, {M.index, 0})
+
+    vim.api.nvim_win_set_config(M.paths.win, {
+        title = 'Finder ' .. M.index .. '/' .. #M.list.paths,
+    })
     M.gen_preview()
 end
 
