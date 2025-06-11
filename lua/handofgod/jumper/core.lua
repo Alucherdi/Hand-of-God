@@ -11,7 +11,7 @@ function M.setup()
 end
 
 function M.add()
-    local path = vim.fn.expand('%')
+    local path = vim.fn.expand('%:.')
     if not path then return end
 
     data.add(path)
