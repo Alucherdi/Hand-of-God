@@ -6,6 +6,6 @@ M.w = M.q
 
 M.w[1] = 27
 
-for i, v in ipairs(M.q) do
+for i, v in ipairs(M.q) do                                              --                                                                    for
     print(v)
 end

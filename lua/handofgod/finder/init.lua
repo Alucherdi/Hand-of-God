@@ -237,8 +237,10 @@ function M.gen_preview()
     vim.api.nvim_set_option_value('filetype', filetype, {buf = M.preview.buf})
 
     local positions = M.list.positions[M.index]
-    vim.api.nvim_win_set_cursor(M.preview.win, {positions[1], positions[2]})
-    vim.api.nvim_win_call(M.preview.win, function() vim.cmd('normal! zz') end)
+    vim.api.nvim_win_call(M.preview.win, function()
+        vim.cmd('normal! zz 0')
+        vim.api.nvim_win_set_cursor(M.preview.win, {positions[1], positions[2]})
+    end)
 
     vim.api.nvim_buf_set_extmark(M.preview.buf, ns, positions[1] - 1, positions[2] - 1, {
         end_col = positions[3] - 1,
