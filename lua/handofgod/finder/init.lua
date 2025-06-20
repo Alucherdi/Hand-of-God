@@ -1,12 +1,12 @@
-local uv = vim.uv
+local spawner = require('handofgod.finder.spawner')
 local commons = require('handofgod.commons')
 local utils = require('handofgod.utils')
 local mod = require('handofgod.modules')
 local ft = require('handofgod.data.filetype')
 
 local ns = vim.api.nvim_create_namespace("HOGFinderHL")
-local cwd = vim.uv.cwd()
 
+local command = 'rg'
 local rg_args = {
     '-i',
     '--vimgrep',
@@ -54,11 +54,6 @@ function M.gen_prompt_module()
         local cursor = {positions[1], positions[2]}
         vim.api.nvim_win_set_cursor(0, cursor)
     end, {buffer = M.prompt.buf})
-    utils.kmap('i', '<C-y>', function()
-        vim.uv.walk(function(handle)
-            print(handle:is_active())
-        end)
-    end)
 
     vim.api.nvim_create_autocmd('TextChangedI', {
         buffer = M.prompt.buf,
@@ -77,11 +72,7 @@ function M.gen_prompt_module()
         callback = function()
             vim.api.nvim_win_close(M.paths.win, true)
             vim.api.nvim_win_close(M.preview.win, true)
-
-            if M.process and M.process.kill then
-                M.process:kill(9)
-                M.process = nil
-            end
+            spawner.stop()
         end
     })
 
@@ -93,8 +84,6 @@ function M.move_to(dir)
     local count = #vim.api.nvim_buf_get_lines(M.paths.buf, 0, -1, false)
     if M.index > count then M.index = count; return end
     if M.index < 1 then M.index = 1; return end
-
-    print(M.list.paths[M.index])
 
     vim.api.nvim_win_set_cursor(M.paths.win, {M.index, 0})
 
@@ -141,44 +130,24 @@ function M.gen_paths_module()
     vim.cmd('set cursorline')
 end
 
-function M.stop_process()
-    if M.rg then
-        M.rg:kill(9)
-    end
-end
 
 function M.gen_data(search)
-    M.stop_process()
-
     M.list.paths = {}
     M.list.positions = {}
     M.last_index = 0
 
-    if M.process and M.process.kill then
-        M.process:kill(9)
-        M.process = nil
-    end
-
     local c = utils.merge_list(rg_args, {search})
 
-
-    local stdout = uv.new_pipe()
-
-    M.rg = uv.spawn('rg', {
-        args = c,
-        stdio = {nil, stdout, nil},
-        cwd = cwd,
-    }, function (code, signal)
+    local on_exit = function(code, signal)
         if code == 1 then
             vim.schedule(function()
                 vim.api.nvim_buf_set_lines(M.paths.buf, 0, -1, false, {})
                 vim.api.nvim_buf_set_lines(M.preview.buf, 0, -1, false, {})
             end)
         end
-    end)
+    end
 
-    uv.read_start(stdout, function(_, data)
-        if not data then return end
+    local on_success = function(data)
         for line in vim.gsplit(data, '\n', {trimempty = true}) do
             local path, srow, scol, match = unpack(vim.split(
                 line, commons.separator,
@@ -214,7 +183,9 @@ function M.gen_data(search)
                 M.last_index = M.last_index + 1
             end)
         end
-    end)
+    end
+
+    spawner.execute(command, c, on_success, nil, on_exit)
 end
 
 function M.gen_preview()
