@@ -128,7 +128,7 @@ function M.create_list()
     vim.o.cursorline = true
 end
 
-function M.list(elements)
+function M.list(element)
     local co = coroutine.running()
     if not co then return end
     if aborted then
@@ -136,12 +136,17 @@ function M.list(elements)
     end
 
     vim.schedule(function()
-        vim.api.nvim_buf_set_lines(M.main.buf, M.main.list.size, -1, false, elements)
-        M.main.list.size = M.main.list.size + #elements
+        if vim.api.nvim_buf_is_valid(M.main.buf) then
+            vim.api.nvim_buf_set_lines(M.main.buf, M.main.list.size, -1, false, {element})
+        end
 
-        vim.api.nvim_win_set_config(M.main.win, {
-            title = 1 .. '/' .. M.main.list.size,
-        })
+        M.main.list.size = M.main.list.size + 1
+
+        if vim.api.nvim_win_is_valid(M.main.win) then
+            vim.api.nvim_win_set_config(M.main.win, {
+                title = 1 .. '/' .. M.main.list.size,
+            })
+        end
 
         coroutine.resume(co)
     end)
@@ -166,8 +171,9 @@ function M.execute_command(pattern)
         function(data)
             local co = coroutine.create(function()
                 if data == nil then return end
-                local lines = vim.split(data, '\n', {trimempty = true, plain = true})
-                M.list(lines)
+                for line in vim.gsplit(data, '\n', {trimempty = true, plain = true}) do
+                    M.list(line)
+                end
             end)
            local res = coroutine.resume(co)
            if not res then return end
