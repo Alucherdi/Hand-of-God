@@ -138,6 +138,7 @@ function M.list(element)
     vim.schedule(function()
         if vim.api.nvim_buf_is_valid(M.main.buf) then
             vim.api.nvim_buf_set_lines(M.main.buf, M.main.list.size, -1, false, {element})
+            vim.api.nvim__redraw({win = M.main.win, flush = true})
         end
 
         M.main.list.size = M.main.list.size + 1
