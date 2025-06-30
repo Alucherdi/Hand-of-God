@@ -18,7 +18,8 @@ function M.execute(command, args, on_success)
         command, {
             cwd = vim.uv.cwd(),
             args = args,
-            stdio = {nil, M.stdout, nil}
+            stdio = {nil, M.stdout, nil},
+            detached = true
         },
         function(_, _) end
     )

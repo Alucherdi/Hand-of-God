@@ -2,11 +2,12 @@ local spawner = require('handofgod.helpers.spawner')
 
 local aborted = false
 local main = {
-    offset = {x = 14, y = 10},
+    offset = {x = 20, y = 10},
     list = {size = 0},
 }
-main.height = vim.o.lines - (10 * 2)
-main.width  = vim.o.columns - (14 * 2)
+
+main.height = vim.o.lines - (main.offset.y * 2)
+main.width  = vim.o.columns - (main.offset.x * 2)
 
 local prompt = {
     width = main.width,
@@ -32,6 +33,25 @@ function M.open()
     M.create_prompt()
 end
 
+function M.close()
+    M.abort()
+
+    M.close_module(M.prompt)
+    M.close_module(M.main)
+
+    vim.api.nvim_input("<esc>")
+end
+
+function M.close_module(module)
+    if vim.api.nvim_buf_is_valid(module.buf) then
+        vim.api.nvim_buf_delete(module.buf, {force = true})
+    end
+
+    if vim.api.nvim_win_is_valid(module.win) then
+        vim.api.nvim_win_close(module.win, true)
+    end
+end
+
 function M.abort()
     spawner.stop()
     aborted = true
@@ -55,23 +75,6 @@ function M.create_prompt()
         row = M.prompt.offset.y
     })
 
-    vim.api.nvim_create_autocmd('bufLeave', {
-        buffer = M.prompt.buf,
-        callback = function()
-            M.abort()
-            if vim.api.nvim_win_is_valid(M.prompt.win) then
-                vim.api.nvim_win_close(M.prompt.win, true)
-            end
-
-            vim.api.nvim_buf_delete(M.main.buf, {force = true})
-            if vim.api.nvim_win_is_valid(M.main.win) then
-                vim.api.nvim_win_close(M.main.win, true)
-            end
-
-            vim.api.nvim_input("<esc>")
-        end
-    })
-
     vim.api.nvim_create_autocmd('TextChangedI', {
         buffer = M.prompt.buf,
         callback = function(_)
@@ -81,25 +84,14 @@ function M.create_prompt()
     })
 
     vim.keymap.set('i', '<Esc>', function()
-        vim.api.nvim_buf_delete(M.prompt.buf, {force = true})
-        if vim.api.nvim_win_is_valid(M.prompt.win) then
-            vim.api.nvim_win_close(M.prompt.win, true)
-        end
+        M.close()
     end, {buffer = M.prompt.buf})
-    vim.keymap.set('i', '<C-n>', function() M.move_to(1) end, {buffer = M.prompt.buf})
-    vim.keymap.set('i', '<C-p>', function() M.move_to(-1) end, {buffer = M.prompt.buf})
-    vim.keymap.set('i', '<CR>', function() M.execute_command(M.pattern) end, {buffer = M.prompt.buf})
-    vim.keymap.set('i', '<C-y>', function()
-        local row = vim.api.nvim_win_get_cursor(M.main.win)[1]
-        local line = vim.api.nvim_buf_get_lines(M.main.buf, row - 1, row, false)[1]
-        local path, matchrow, matchcol, _ = unpack(vim.split(line, ':', {plain = true}))
-        vim.api.nvim_buf_delete(M.prompt.buf, {force = true})
-        if vim.api.nvim_win_is_valid(M.prompt.win) then
-            vim.api.nvim_win_close(M.prompt.win, true)
-        end
 
-        M.goto(path, {tonumber(matchrow), tonumber(matchcol)})
+    vim.keymap.set('i', '<CR>', function()
+        M.execute_command(M.pattern)
+        M.close_module(M.prompt)
     end, {buffer = M.prompt.buf})
+
 
     vim.cmd('startinsert')
 end
@@ -111,9 +103,11 @@ end
 
 function M.create_list()
     M.main.buf = vim.api.nvim_create_buf(false, true)
-    vim.bo[M.main.buf].buftype = 'nofile'
-    vim.bo[M.main.buf].bufhidden = 'wipe'
-    vim.bo[M.main.buf].swapfile = false
+    local options = vim.bo[M.main.buf]
+
+    options.buftype = 'nowrite'
+    options.bufhidden = 'wipe'
+    options.swapfile = false
 
     M.main.win = vim.api.nvim_open_win(M.main.buf, true, {
         relative = 'editor',
@@ -125,10 +119,28 @@ function M.create_list()
         col = M.main.offset.x
     })
 
+    vim.keymap.set('n', 'q', function() M.close() end, {buffer = M.main.buf})
+    vim.keymap.set('n', '<Esc>', function() M.close() end, {buffer = M.main.buf})
+
+    vim.keymap.set('n', '<CR>', function()
+        local row = vim.api.nvim_win_get_cursor(M.main.win)[1]
+        local line = vim.api.nvim_buf_get_lines(M.main.buf, row - 1, row, false)[1]
+        local path, matchrow, matchcol, _ = unpack(vim.split(line, ':', {plain = true}))
+        M.close()
+
+        M.goto(path, {tonumber(matchrow), tonumber(matchcol)})
+    end, {buffer = M.main.buf})
+
+    vim.keymap.set('n', '<C-f>', function()
+        M.create_prompt()
+        vim.api.nvim_buf_set_lines(M.prompt.buf, 0, -1, false, {M.pattern})
+        vim.api.nvim_win_set_cursor(M.prompt.win, {1, #M.pattern})
+    end, {buffer = M.main.buf})
+
     vim.o.cursorline = true
 end
 
-function M.list(element)
+function M.list(elements)
     local co = coroutine.running()
     if not co then return end
     if aborted then
@@ -137,11 +149,11 @@ function M.list(element)
 
     vim.schedule(function()
         if vim.api.nvim_buf_is_valid(M.main.buf) then
-            vim.api.nvim_buf_set_lines(M.main.buf, M.main.list.size, -1, false, {element})
+            vim.api.nvim_buf_set_lines(M.main.buf, M.main.list.size, -1, false, elements)
             vim.api.nvim__redraw({win = M.main.win, flush = true})
         end
 
-        M.main.list.size = M.main.list.size + 1
+        M.main.list.size = M.main.list.size + #elements
 
         if vim.api.nvim_win_is_valid(M.main.win) then
             vim.api.nvim_win_set_config(M.main.win, {
@@ -172,28 +184,13 @@ function M.execute_command(pattern)
         function(data)
             local co = coroutine.create(function()
                 if data == nil then return end
-                for line in vim.gsplit(data, '\n', {trimempty = true, plain = true}) do
-                    M.list(line)
-                end
+                local lines = vim.split(data, '\n', {trimempty = true, plain = true})
+                M.list(lines)
             end)
            local res = coroutine.resume(co)
            if not res then return end
         end
    )
-end
-
-function M.move_to(dir)
-    local row = vim.api.nvim_win_get_cursor(M.main.win)[1] + dir
-    local count = #vim.api.nvim_buf_get_lines(M.main.buf, 0, -1, false)
-
-    if row > count then return end
-    if row < 1 then return end
-
-    vim.api.nvim_win_set_cursor(M.main.win, {row, 0})
-
-    vim.api.nvim_win_set_config(M.main.win, {
-        title = row .. '/' .. M.main.list.size,
-    })
 end
 
 return M
