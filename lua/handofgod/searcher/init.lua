@@ -14,6 +14,7 @@ local M = {
     }]]--,
 }
 
+
 function M:setup(config)
     M.config.case_sensitive = config.case_sensitive or false
     M.config.contract_on_large_paths = config.contract_on_large_paths or false
@@ -81,8 +82,8 @@ local function create_prompt(target)
 
     main.win = commons:create_window('input', main.buf, {
         style = 'minimal',
-        row = 13,
-        col = 0,
+        row = target.offset.y - 2,
+        col = target.offset.x,
         height = 1
     })
 
@@ -144,12 +145,12 @@ local function create_list()
     local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, list)
 
-    local win  = commons:create_window('Searcher', buf, {
+    local win, offset, size = commons:create_window('Searcher', buf, {
         style = 'minimal',
     })
     vim.cmd('set cursorline')
 
-    return {buf = buf, win = win}
+    return {buf = buf, win = win, offset = offset, size = size}
 end
 
 function M:open()
