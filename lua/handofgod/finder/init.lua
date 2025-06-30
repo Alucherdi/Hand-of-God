@@ -1,222 +1,198 @@
-local spawner = require('handofgod.finder.spawner')
-local commons = require('handofgod.commons')
-local utils = require('handofgod.utils')
-local mod = require('handofgod.modules')
-local ft = require('handofgod.data.filetype')
+local spawner = require('handofgod.helpers.spawner')
 
-local ns = vim.api.nvim_create_namespace("HOGFinderHL")
+local aborted = false
+local main = {
+    offset = {x = 14, y = 10},
+    list = {size = 0},
+}
+main.height = vim.o.lines - (10 * 2)
+main.width  = vim.o.columns - (14 * 2)
 
-local command = 'rg'
-local rg_args = {
-    '-i',
-    '--vimgrep',
-    '--only-matching',
-    '--field-match-separator=' .. commons.separator
+local prompt = {
+    width = main.width,
+    height = 1
+}
+
+prompt.offset = {
+    x = main.offset.x,
+    y = main.offset.y - 3
 }
 
 local M = {
-    index = 1,
-    list = {paths = {}, positions = {}},
-    last_index = 0,
-    rg = nil,
-
-    preview = nil,
-    paths = nil,
-    prompt = nil
+    main = main,
+    prompt = prompt,
+    pattern = ''
 }
 
-function M.setup(config) end
-
-function M.open()
-    M.gen_paths_module()
-    M.gen_preview_module()
-    M.gen_prompt_module()
+function M.setup(config)
 end
 
-function M.gen_prompt_module()
-    M.prompt = mod.switch('finder')
+function M.open()
+    M.create_list()
+    M.create_prompt()
+end
 
+function M.abort()
+    spawner.stop()
+    aborted = true
+end
+
+function M.create_prompt()
     M.prompt.buf = vim.api.nvim_create_buf(false, true)
+
     vim.api.nvim_set_option_value('buftype', 'prompt', {buf = M.prompt.buf})
-    M.prompt.win = commons:create_window('input', M.prompt.buf, {
-        style = 'minimal', row = 15, col = 0, height = 1
-    })
     vim.fn.prompt_setprompt(M.prompt.buf, '')
 
-    utils.kmap('i', '<Esc>', function() commons.close(M.prompt) end, {buffer = M.prompt.buf})
-    utils.kmap('i', '<C-n>', function() M.move_to(1) end)
-    utils.kmap('i', '<C-p>', function() M.move_to(-1) end)
-    utils.kmap('i', '<CR>', function()
-        if #M.list.paths == 0 then return end
-        commons.close(M.prompt)
-        vim.cmd('edit ' .. M.list.paths[M.index])
-        local positions = M.list.positions[M.index]
-        local cursor = {positions[1], positions[2]}
-        vim.api.nvim_win_set_cursor(0, cursor)
-    end, {buffer = M.prompt.buf})
-
-    vim.api.nvim_create_autocmd('TextChangedI', {
-        buffer = M.prompt.buf,
-        callback = function(_)
-            M.index = 1
-            local row, _ = unpack(vim.api.nvim_win_get_cursor(M.prompt.win))
-            local line = vim.api.nvim_buf_get_lines(M.prompt.buf, row - 1, row, false)[1]
-
-            if vim.trim(line) == '' then return end
-            M.gen_data(line)
-        end
+    M.prompt.win = vim.api.nvim_open_win(M.prompt.buf, true, {
+        relative = 'editor',
+        style = 'minimal',
+        border = 'single',
+        width = M.prompt.width,
+        height = M.prompt.height,
+        title = 'Grep',
+        title_pos = 'center',
+        col = M.prompt.offset.x,
+        row = M.prompt.offset.y
     })
 
     vim.api.nvim_create_autocmd('bufLeave', {
         buffer = M.prompt.buf,
         callback = function()
-            vim.api.nvim_win_close(M.paths.win, true)
-            vim.api.nvim_win_close(M.preview.win, true)
-            spawner.stop()
+            M.abort()
+            if vim.api.nvim_win_is_valid(M.prompt.win) then
+                vim.api.nvim_win_close(M.prompt.win, true)
+            end
+
+            vim.api.nvim_buf_delete(M.main.buf, {force = true})
+            if vim.api.nvim_win_is_valid(M.main.win) then
+                vim.api.nvim_win_close(M.main.win, true)
+            end
+
+            vim.api.nvim_input("<esc>")
         end
     })
+
+    vim.api.nvim_create_autocmd('TextChangedI', {
+        buffer = M.prompt.buf,
+        callback = function(_)
+            local row, _ = unpack(vim.api.nvim_win_get_cursor(M.prompt.win))
+            M.pattern = vim.api.nvim_buf_get_lines(M.prompt.buf, row - 1, row, false)[1]
+        end
+    })
+
+    vim.keymap.set('i', '<Esc>', function()
+        vim.api.nvim_buf_delete(M.prompt.buf, {force = true})
+        if vim.api.nvim_win_is_valid(M.prompt.win) then
+            vim.api.nvim_win_close(M.prompt.win, true)
+        end
+    end, {buffer = M.prompt.buf})
+    vim.keymap.set('i', '<C-n>', function() M.move_to(1) end, {buffer = M.prompt.buf})
+    vim.keymap.set('i', '<C-p>', function() M.move_to(-1) end, {buffer = M.prompt.buf})
+    vim.keymap.set('i', '<CR>', function() M.execute_command(M.pattern) end, {buffer = M.prompt.buf})
+    vim.keymap.set('i', '<C-y>', function()
+        local row = vim.api.nvim_win_get_cursor(M.main.win)[1]
+        local line = vim.api.nvim_buf_get_lines(M.main.buf, row - 1, row, false)[1]
+        local path, matchrow, matchcol, _ = unpack(vim.split(line, ':', {plain = true}))
+        vim.api.nvim_buf_delete(M.prompt.buf, {force = true})
+        if vim.api.nvim_win_is_valid(M.prompt.win) then
+            vim.api.nvim_win_close(M.prompt.win, true)
+        end
+
+        M.goto(path, {tonumber(matchrow), tonumber(matchcol)})
+    end, {buffer = M.prompt.buf})
 
     vim.cmd('startinsert')
 end
 
-function M.move_to(dir)
-    M.index = M.index + dir
-    local count = #vim.api.nvim_buf_get_lines(M.paths.buf, 0, -1, false)
-    if M.index > count then M.index = count; return end
-    if M.index < 1 then M.index = 1; return end
-
-    vim.api.nvim_win_set_cursor(M.paths.win, {M.index, 0})
-
-    vim.api.nvim_win_set_config(M.paths.win, {
-        title = 'Finder ' .. M.index .. '/' .. #M.list.paths,
-    })
-    M.gen_preview()
+function M.goto(path, cursor)
+    vim.cmd('edit ' .. path)
+    vim.api.nvim_win_set_cursor(0, cursor)
 end
 
-function M.gen_preview_module()
-    M.preview = {}
-    M.preview.buf = vim.api.nvim_create_buf(false, true)
+function M.create_list()
+    M.main.buf = vim.api.nvim_create_buf(false, true)
+    vim.bo[M.main.buf].buftype = 'nofile'
+    vim.bo[M.main.buf].bufhidden = 'wipe'
+    vim.bo[M.main.buf].swapfile = false
 
-    vim.bo[M.preview.buf].buftype = 'nofile'
-    vim.bo[M.preview.buf].bufhidden = 'wipe'
-    vim.bo[M.preview.buf].swapfile = false
-
-    vim.api.nvim_buf_set_lines(M.preview.buf, 0, -1, false, {})
-
-    M.preview.win = commons:create_window('', M.preview.buf, {
+    M.main.win = vim.api.nvim_open_win(M.main.buf, true, {
+        relative = 'editor',
         style = 'minimal',
-        row = 11,
-        height = 4,
+        border = 'single',
+        height = M.main.height,
+        width = M.main.width,
+        row = M.main.offset.y,
+        col = M.main.offset.x
     })
 
-    vim.cmd('set cursorline')
+    vim.o.cursorline = true
 end
 
-function M.gen_paths_module()
-    M.paths = {}
-    M.paths.buf = vim.api.nvim_create_buf(false, true)
+function M.list(element)
+    local co = coroutine.running()
+    if not co then return end
+    if aborted then
+        error('Coroutine aborted')
+    end
 
-    vim.bo[M.paths.buf].buftype = 'nofile'
-    vim.bo[M.paths.buf].bufhidden = 'wipe'
-    vim.bo[M.paths.buf].swapfile = false
-
-    vim.api.nvim_buf_set_lines(M.paths.buf, 0, -1, false, {})
-
-    M.paths.win = commons:create_window('Finder', M.paths.buf, {
-        style = 'minimal',
-        height = 10,
-    })
-
-    vim.cmd('set cursorline')
-end
-
-
-function M.gen_data(search)
-    M.list.paths = {}
-    M.list.positions = {}
-    M.last_index = 0
-
-    local c = utils.merge_list(rg_args, {search})
-
-    local on_exit = function(code, signal)
-        if code == 1 then
-            vim.schedule(function()
-                vim.api.nvim_buf_set_lines(M.paths.buf, 0, -1, false, {})
-                vim.api.nvim_buf_set_lines(M.preview.buf, 0, -1, false, {})
-            end)
+    vim.schedule(function()
+        if vim.api.nvim_buf_is_valid(M.main.buf) then
+            vim.api.nvim_buf_set_lines(M.main.buf, M.main.list.size, -1, false, {element})
+            vim.api.nvim__redraw({win = M.main.win, flush = true})
         end
-    end
 
-    local on_success = function(data)
-        for line in vim.gsplit(data, '\n', {trimempty = true}) do
-            local path, srow, scol, match = unpack(vim.split(
-                line, commons.separator,
-                {trimempty = true, plain = true}))
+        M.main.list.size = M.main.list.size + 1
 
-            if match == nil then return end
-            local row = tonumber(srow)
-            local col = tonumber(scol)
-
-            table.insert(M.list.paths, vim.fn.fnamemodify(path, ':.'))
-            table.insert(M.list.positions, {row, col, col + #match})
-
-
-            vim.schedule(function()
-                if vim.api.nvim_buf_is_valid(M.paths.buf) then
-                    vim.api.nvim_buf_set_lines(M.paths.buf, 0, -1, false, M.list.paths)
-                    vim.api.nvim_win_set_config(M.paths.win, {
-                        title = 'Finder ' .. M.index .. '/' .. #M.list.paths,
-                    })
-                end
-
-                if M.last_index == 0 then
-                    M.gen_preview()
-                end
-
-                if vim.api.nvim_buf_is_valid(M.paths.buf) then
-                    vim.api.nvim__redraw({
-                        buf = M.paths.buf,
-                        flush = true
-                    })
-                end
-
-                M.last_index = M.last_index + 1
-            end)
+        if vim.api.nvim_win_is_valid(M.main.win) then
+            vim.api.nvim_win_set_config(M.main.win, {
+                title = 1 .. '/' .. M.main.list.size,
+            })
         end
-    end
 
-    spawner.execute(command, c, on_success, nil, on_exit)
-end
-
-function M.gen_preview()
-    if not vim.api.nvim_buf_is_valid(M.paths.buf) then return end
-
-    local row, _ = unpack(vim.api.nvim_win_get_cursor(M.paths.win))
-    local path = vim.api.nvim_buf_get_lines(M.paths.buf, row - 1, row, false)[1]
-    if not path or path == '' then return end
-
-    local file
-    local status, err = pcall(function() file = vim.fn.readfile(path) end)
-    if err then
-        vim.api.nvim_buf_set_lines(M.preview.buf, 0, 1, false, {'ERR READING FILE: ' .. err})
-        return
-    end
-
-    vim.api.nvim_buf_set_lines(M.preview.buf, 0, 1, false, file)
-
-    local filetype = ft.detect(path or '')
-    vim.api.nvim_set_option_value('filetype', filetype, {buf = M.preview.buf})
-
-    local positions = M.list.positions[M.index]
-    vim.api.nvim_win_call(M.preview.win, function()
-        vim.cmd('normal! zz 0')
-        vim.api.nvim_win_set_cursor(M.preview.win, {positions[1], positions[2]})
+        coroutine.resume(co)
     end)
 
-    vim.api.nvim_buf_set_extmark(M.preview.buf, ns, positions[1] - 1, positions[2] - 1, {
-        end_col = positions[3] - 1,
-        end_row = positions[1] - 1,
-        hl_group = "CurSearch"
+    coroutine.yield()
+end
+
+function M.execute_command(pattern)
+    M.main.list.size = 0
+    aborted = false
+
+    vim.api.nvim_win_set_config(M.main.win, {
+        title = '',
+    })
+
+    vim.api.nvim_buf_set_lines(M.main.buf, 0, -1, false, {})
+    local command = 'rg'
+    local args = {'--vimgrep', '-i', pattern}
+
+    spawner.execute(
+        command, args,
+        function(data)
+            local co = coroutine.create(function()
+                if data == nil then return end
+                for line in vim.gsplit(data, '\n', {trimempty = true, plain = true}) do
+                    M.list(line)
+                end
+            end)
+           local res = coroutine.resume(co)
+           if not res then return end
+        end
+   )
+end
+
+function M.move_to(dir)
+    local row = vim.api.nvim_win_get_cursor(M.main.win)[1] + dir
+    local count = #vim.api.nvim_buf_get_lines(M.main.buf, 0, -1, false)
+
+    if row > count then return end
+    if row < 1 then return end
+
+    vim.api.nvim_win_set_cursor(M.main.win, {row, 0})
+
+    vim.api.nvim_win_set_config(M.main.win, {
+        title = row .. '/' .. M.main.list.size,
     })
 end
 
