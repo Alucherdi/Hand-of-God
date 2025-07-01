@@ -2,17 +2,19 @@ local M = {
     separator = '[HOG_SEP]'
 }
 
-local offset = {
-    x = 60,
-    y = 8
-}
+function M:create_window(title, buf, opts)
+    local options = opts or {}
 
-local size = {
-    width = vim.o.columns - (offset.x * 2),
-    height = vim.o.lines - (offset.y * 2)
-}
+    local size = {
+        width = options.width or 60,
+        height = options.height or 30
+    }
 
-function M:create_window(title, buf, options)
+    local offset = {
+        x = (vim.o.columns / 2) - (size.width / 2),
+        y = math.ceil(vim.o.lines / 2) - math.ceil(size.height / 2),
+    }
+
     local default = {
         relative = 'editor',
         title = title,
@@ -38,7 +40,10 @@ function M:create_window(title, buf, options)
 end
 
 function M.close(mod)
-    if not mod then return end
+    if not mod or not mod.win or not mod.buf then
+        return
+    end
+
     local wv = vim.api.nvim_win_is_valid(mod.win)
     local bv = vim.api.nvim_buf_is_valid(mod.buf)
 

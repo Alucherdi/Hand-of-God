@@ -2,8 +2,6 @@ local utils = require('handofgod.utils')
 local data = require('handofgod.data')
 local commons = require('handofgod.commons')
 
-local mod = require('handofgod.modules')
-
 local M = { }
 
 function M.setup()
@@ -34,7 +32,7 @@ function M.rewrite(lines)
 end
 
 function M.explore()
-    local main = mod.switch('jumper')
+    local main = {}
     if not main then return end
 
     main.buf = vim.api.nvim_create_buf(false, true)

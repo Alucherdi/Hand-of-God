@@ -1,27 +1,15 @@
 local spawner = require('handofgod.helpers.spawner')
+local commons = require('handofgod.commons')
 
 local aborted = false
-local main = {
-    offset = {x = 20, y = 10},
-    list = {size = 0},
-}
-
-main.height = vim.o.lines - (main.offset.y * 2)
-main.width  = vim.o.columns - (main.offset.x * 2)
-
-local prompt = {
-    width = main.width,
-    height = 1
-}
-
-prompt.offset = {
-    x = main.offset.x,
-    y = main.offset.y - 3
-}
 
 local M = {
-    main = main,
-    prompt = prompt,
+    main = {
+        list = {
+            size = 0
+        }
+    },
+    prompt = {},
     pattern = ''
 }
 
@@ -63,16 +51,11 @@ function M.create_prompt()
     vim.api.nvim_set_option_value('buftype', 'prompt', {buf = M.prompt.buf})
     vim.fn.prompt_setprompt(M.prompt.buf, '')
 
-    M.prompt.win = vim.api.nvim_open_win(M.prompt.buf, true, {
-        relative = 'editor',
+    M.prompt.win, M.prompt.offset, M.prompt.size = commons:create_window('Grep', M.prompt.buf, {
         style = 'minimal',
-        border = 'single',
-        width = M.prompt.width,
-        height = M.prompt.height,
-        title = 'Grep',
-        title_pos = 'center',
-        col = M.prompt.offset.x,
-        row = M.prompt.offset.y
+        width = M.main.size.width,
+        row = M.main.offset.y - 2,
+        height = 1
     })
 
     vim.api.nvim_create_autocmd('TextChangedI', {
@@ -109,14 +92,8 @@ function M.create_list()
     options.bufhidden = 'wipe'
     options.swapfile = false
 
-    M.main.win = vim.api.nvim_open_win(M.main.buf, true, {
-        relative = 'editor',
-        style = 'minimal',
-        border = 'single',
-        height = M.main.height,
-        width = M.main.width,
-        row = M.main.offset.y,
-        col = M.main.offset.x
+    M.main.win, M.main.offset, M.main.size = commons:create_window('', M.main.buf, {
+        width = 80
     })
 
     vim.keymap.set('n', 'q', function() M.close() end, {buffer = M.main.buf})

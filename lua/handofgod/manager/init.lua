@@ -5,7 +5,6 @@ local save_window = require('handofgod.manager.save_window')
 local rename_window = require('handofgod.manager.rename_window')
 
 local data = require('handofgod.data')
-local mod = require('handofgod.modules')
 
 local M = {
     config = {
@@ -34,7 +33,7 @@ function M:setup(config)
 end
 
 function M:open()
-    local main = mod.switch('manager')
+    local main = {}
     if not main then return end
 
     M.host = vim.api.nvim_get_current_win()

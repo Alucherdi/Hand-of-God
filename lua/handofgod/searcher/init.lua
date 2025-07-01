@@ -1,6 +1,5 @@
 local commons = require('handofgod.commons')
 local utils = require('handofgod.utils')
-local mod = require('handofgod.modules')
 local command = 'fd -c never -tf -I'
 
 local M = {
@@ -73,7 +72,7 @@ local function move_cursor_keymaps(target, buf)
 end
 
 local function create_prompt(target)
-    local main = mod.switch('searcher')
+    local main = {}
     if not main then return end
 
     main.buf = vim.api.nvim_create_buf(false, true)
