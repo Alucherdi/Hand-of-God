@@ -9,7 +9,7 @@ M.path = M.datapath .. M.basename
 
 function M.ensure_dir()
     if vim.fn.isdirectory(M.path) == 0 then
-        vim.loop.fs_mkdir(M.path, 493)
+        local o = vim.uv.fs_mkdir(M.datapath, 493)
     end
 end
 

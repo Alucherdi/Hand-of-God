@@ -6,6 +6,7 @@ local M = { }
 
 function M.setup()
     data.load()
+    data.ensure_dir()
 end
 
 function M.add()
