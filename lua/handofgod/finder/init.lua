@@ -10,7 +10,9 @@ local M = {
         }
     },
     prompt = {},
-    pattern = ''
+    pattern = '',
+    line_cap = 10000,
+    exceeded = false,
 }
 
 function M.setup(config)
@@ -125,21 +127,29 @@ function M.list(elements)
     end
 
     vim.schedule(function()
-        if vim.api.nvim_buf_is_valid(M.main.buf) then
-            vim.api.nvim_buf_set_lines(M.main.buf, M.main.list.size, -1, false, elements)
-            vim.api.nvim__redraw({win = M.main.win, flush = true})
-        end
-
-        M.main.list.size = M.main.list.size + #elements
-
         if vim.api.nvim_win_is_valid(M.main.win) then
             vim.api.nvim_win_set_config(M.main.win, {
                 title = 1 .. '/' .. M.main.list.size,
             })
         end
 
+        if M.main.list.size >= M.line_cap then
+            M.exceeded = true
+            if vim.api.nvim_buf_is_valid(M.main.buf) then
+                vim.api.nvim__redraw({win = M.main.win, flush = true})
+            end
+        else
+            if vim.api.nvim_buf_is_valid(M.main.buf) then
+                vim.api.nvim_buf_set_lines(M.main.buf, M.main.list.size, -1, false, elements)
+                vim.api.nvim__redraw({win = M.main.win, flush = true})
+            end
+        end
+
+
+        M.main.list.size = M.main.list.size + #elements
         coroutine.resume(co)
     end)
+
 
     coroutine.yield()
 end
