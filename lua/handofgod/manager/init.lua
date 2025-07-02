@@ -9,7 +9,16 @@ local data = require('handofgod.data')
 local M = {
     config = {
         ignore = {},
-        write_on_exit = true
+        write_on_exit = true,
+        ask_confirmation = true,
+
+        keybinds = {
+            rename_file = '<leader>rn',
+            write_prompt = '<leader>w',
+            push_back = '<BS>',
+            close = {'<Esc>', 'q'},
+            go_to = '<CR>',
+        },
     },
 
     is_active = false,
@@ -29,7 +38,9 @@ local function gen_list(path)
 end
 
 function M:setup(config)
-    self.config = vim.tbl_extend('force', self.config, config or {})
+    if not config then return end
+    self.config = vim.tbl_deep_extend('force', self.config, config)
+
 end
 
 function M:open()
@@ -46,13 +57,13 @@ function M:open()
         gen_title(M.bufferPath),
         main.buf)
 
-    utils.kmap('n', '<BS>', function()
+    utils.kmap('n', M.config.keybinds.push_back, function()
         list = gen_list(vim.fn.fnamemodify(M.bufferPath, ':h'))
         vim.api.nvim_buf_set_lines(main.buf, 0, -1, false, list)
         vim.api.nvim_win_set_config(main.win, {title = gen_title(M.bufferPath)})
     end, {buffer = main.buf})
 
-    utils.kmap('n', {'<Esc>', 'q'}, function()
+    utils.kmap('n', M.config.keybinds.close, function()
         if self.config.write_on_exit then
             self:write()
         end
@@ -60,11 +71,11 @@ function M:open()
         commons.close(main)
     end, {buffer = main.buf})
 
-    utils.kmap('n', '<leader>w', function()
+    utils.kmap('n', M.config.keybinds.write_prompt, function()
         self:write()
     end, {buffer = main.buf})
 
-    utils.kmap('n', '<CR>', function()
+    utils.kmap('n', M.config.keybinds.go_to, function()
         local row = vim.api.nvim_win_get_cursor(0)[1]
         local line = vim.api.nvim_buf_get_lines(main.buf, row - 1, row, false)[1]
 
@@ -76,7 +87,7 @@ function M:open()
         end
     end, {buffer = main.buf})
 
-    utils.kmap('n', '<leader>rn', function()
+    utils.kmap('n', M.config.keybinds.rename_file, function()
         local row = vim.api.nvim_win_get_cursor(0)[1]
         local line = vim.api.nvim_buf_get_lines(main.buf, row - 1, row, false)[1]
 
@@ -133,8 +144,12 @@ function M:write()
     local additions = utils.get_diff(lines, actual)
     local deletions = utils.get_diff(actual, lines)
 
-    save_window.spawn(additions, deletions,
-        function() self.manage(additions, deletions) end)
+    if self.config.ask_confirmation then
+        save_window.spawn(additions, deletions,
+            function() self.manage(additions, deletions) end)
+    else
+        self.manage(additions, deletions)
+    end
 end
 
 
