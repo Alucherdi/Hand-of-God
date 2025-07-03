@@ -8,7 +8,6 @@ function M.spawn(name, path, callback)
     local win = commons:create_window('Rename', buf, {
         style = 'minimal',
         width = #name + 8, height = 1,
-        row = 1, col = 1
     })
 
     vim.keymap.set('n', 'q', function()

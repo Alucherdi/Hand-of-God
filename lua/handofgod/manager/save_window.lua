@@ -15,7 +15,6 @@ function M.spawn(additions, deletions, confirmation_callback)
     local win = commons:create_window('Save? y/n', buf, {
         style = 'minimal',
         width = 20, height = #list,
-        row = 1, col = 1
     })
 
     utils.kmap('n', 'y', function()
