@@ -54,7 +54,6 @@ local function set_list_to_buffer(list, listbuf, current_path)
         local name = vim.fn.fnamemodify(v, ':t')
         local absolute_path = current_path .. '/' .. v
 
-        print(absolute_path)
         local isdir = vim.fn.isdirectory(absolute_path)
         if isdir == 1 then
             icon, hl = mini_icons.get('directory', name)
