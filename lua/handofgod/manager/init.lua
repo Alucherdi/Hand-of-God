@@ -4,6 +4,7 @@ local utils   = require('handofgod.utils')
 local save_window = require('handofgod.manager.save_window')
 local rename_window = require('handofgod.manager.rename_window')
 
+local ns = vim.api.nvim_create_namespace('HOGManagerNS')
 local data = require('handofgod.data')
 
 local M = {
@@ -37,6 +38,38 @@ local function gen_list(path)
     return data.ls(M.bufferPath, M.config.ignore)
 end
 
+local function set_list_to_buffer(list, listbuf, current_path)
+    if not current_path then
+        current_path = vim.fn.expand('%:p:h')
+    end
+
+    vim.api.nvim_buf_set_lines(listbuf, 0, -1, false, list)
+
+    local mini_icons = _G.MiniIcons
+
+    if not mini_icons then return end
+
+    for i, v in ipairs(list) do
+        local icon, hl
+        local name = vim.fn.fnamemodify(v, ':t')
+        local absolute_path = current_path .. '/' .. v
+
+        print(absolute_path)
+        local isdir = vim.fn.isdirectory(absolute_path)
+        if isdir == 1 then
+            icon, hl = mini_icons.get('directory', name)
+        else
+            icon, hl = mini_icons.get('file', name)
+        end
+
+        vim.api.nvim_buf_set_extmark(listbuf, ns, i - 1, 0, {
+            sign_text = icon,
+            sign_hl_group = hl,
+        })
+    end
+
+end
+
 function M:setup(config)
     if not config then return end
     self.config = vim.tbl_deep_extend('force', self.config, config)
@@ -51,15 +84,18 @@ function M:open()
     local list = gen_list()
 
     main.buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_lines(main.buf, 0, -1, false, list)
+    set_list_to_buffer(list, main.buf)
 
     main.win = commons:create_window(
         gen_title(M.bufferPath),
-        main.buf)
+        main.buf, {
+            style = 'minimal'
+        })
 
     utils.kmap('n', M.config.keybinds.push_back, function()
-        list = gen_list(vim.fn.fnamemodify(M.bufferPath, ':h'))
-        vim.api.nvim_buf_set_lines(main.buf, 0, -1, false, list)
+        local new_path = vim.fn.fnamemodify(M.bufferPath, ':h')
+        list = gen_list(new_path)
+        set_list_to_buffer(list, main.buf, new_path)
         vim.api.nvim_win_set_config(main.win, {title = gen_title(M.bufferPath)})
     end, {buffer = main.buf})
 
@@ -92,7 +128,9 @@ function M:open()
         local line = vim.api.nvim_buf_get_lines(main.buf, row - 1, row, false)[1]
 
         rename_window.spawn(line, M.bufferPath .. '/',
-            function() vim.api.nvim_buf_set_lines(main.buf, 0, -1, false, gen_list(M.bufferPath)) end)
+            function()
+                set_list_to_buffer(gen_list(M.bufferPath), main.buf)
+            end)
     end, {buffer = main.buf})
 
     vim.api.nvim_create_autocmd("BufLeave", {
@@ -125,9 +163,10 @@ function M.manage(additions, subtractions)
 end
 
 function M:goto(path, buf, window)
+    local new_path = M.bufferPath .. '/' .. path:sub(0, -2)
     local list = gen_list(M.bufferPath .. '/' .. path:sub(0, -2))
 
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, list)
+    set_list_to_buffer(list, buf, new_path)
     vim.api.nvim_win_set_config(window, {title = gen_title(M.bufferPath)})
 end
 
