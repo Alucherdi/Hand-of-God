@@ -20,7 +20,6 @@ function M.spawn(additions, deletions, confirmation_callback)
     utils.kmap('n', 'y', function()
         confirmation_callback()
         vim.api.nvim_win_close(win, true)
-        print('Saved :)')
     end, {buffer = buf, nowait = true, noremap = true})
 
     utils.kmap('n', 'n', function()

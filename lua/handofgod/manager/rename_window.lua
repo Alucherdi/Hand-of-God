@@ -12,7 +12,6 @@ function M.spawn(name, path, callback)
 
     vim.keymap.set('n', 'q', function()
         local new_name = vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1]
-        print(path .. new_name)
 
         vim.fn.rename(
             path .. name,
