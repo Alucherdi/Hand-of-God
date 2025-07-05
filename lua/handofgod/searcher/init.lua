@@ -129,7 +129,7 @@ local function create_prompt(target)
             list = M.handle_contraction(list)
 
             vim.api.nvim_buf_set_lines(target.buf, 0, -1, false, list)
-            commons.set_icons(target.buf, list, ns, vim.uv.cwd())
+            commons.set_icons(target.buf, M.list, ns, vim.uv.cwd())
         end
     })
 

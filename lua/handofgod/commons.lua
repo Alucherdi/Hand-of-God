@@ -50,6 +50,14 @@ function M.set_icons(buf, paths, ns, current_path)
         current_path = vim.fn.expand('%:p:h')
     end
 
+    local id = vim.api.del
+    if #paths == 0 then
+        local extmarks = vim.api.nvim_buf_get_extmarks(buf, ns, 0, -1, {})
+        for i, v in ipairs(extmarks) do
+            vim.api.nvim_buf_del_extmark(buf, ns, v[1])
+        end
+    end
+
     for i, v in ipairs(paths) do
         local icon, hl
         local name = vim.fn.fnamemodify(v, ':t')
