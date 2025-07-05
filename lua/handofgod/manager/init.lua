@@ -123,7 +123,9 @@ function M.manage(additions, subtractions)
         local dir = M.bufferPath .. '/' .. vim.fn.fnamemodify(path, ':h')
         if dir then vim.fn.mkdir(dir, 'p') end
 
-        vim.fn.writefile({}, M.bufferPath .. '/' .. path)
+        if path:sub(-1) ~= '/' then
+            vim.fn.writefile({}, M.bufferPath .. '/' .. path)
+        end
     end
 
     for _, path in ipairs(subtractions) do
@@ -141,7 +143,7 @@ end
 
 function M:goto(path, buf, window)
     local new_path = M.bufferPath .. '/' .. path:sub(0, -2)
-    local list = gen_list(M.bufferPath .. '/' .. path:sub(0, -2))
+    local list = gen_list(new_path)
 
     set_list_to_buffer(list, buf, new_path)
     vim.api.nvim_win_set_config(window, {title = gen_title(M.bufferPath)})
