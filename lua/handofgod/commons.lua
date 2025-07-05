@@ -64,6 +64,7 @@ function M.set_icons(buf, paths, ns, current_path)
         local absolute_path = current_path .. '/' .. v
 
         local isdir = vim.fn.isdirectory(absolute_path)
+        print(absolute_path, isdir)
         if isdir == 1 then
             icon, hl = mini_icons.get('directory', name)
         else

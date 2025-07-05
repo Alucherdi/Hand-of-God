@@ -22,7 +22,10 @@ local M = {
         },
     },
 
+    mod = {},
+    host = nil,
     is_active = false,
+    files = {}
 }
 
 local function gen_title(path)
@@ -39,6 +42,7 @@ local function gen_list(path)
 end
 
 local function set_list_to_buffer(list, listbuf, current_path)
+    if not vim.api.nvim_buf_is_valid(listbuf) then return end
     if not current_path then
         current_path = vim.fn.expand('%:p:h')
     end
@@ -54,64 +58,61 @@ function M:setup(config)
 end
 
 function M:open()
-    local main = {}
-    if not main then return end
-
     M.host = vim.api.nvim_get_current_win()
-    local list = gen_list()
+    M.list = gen_list()
 
-    main.buf = vim.api.nvim_create_buf(false, true)
-    set_list_to_buffer(list, main.buf)
+    M.mod.buf = vim.api.nvim_create_buf(false, true)
+    set_list_to_buffer(M.list, M.mod.buf)
 
-    main.win = commons:create_window(
+    M.mod.win = commons:create_window(
         gen_title(M.bufferPath),
-        main.buf, {
+        M.mod.buf, {
             style = 'minimal'
         })
 
     utils.kmap('n', M.config.keybinds.push_back, function()
         local new_path = vim.fn.fnamemodify(M.bufferPath, ':h')
-        list = gen_list(new_path)
-        set_list_to_buffer(list, main.buf, new_path)
-        vim.api.nvim_win_set_config(main.win, {title = gen_title(M.bufferPath)})
-    end, {buffer = main.buf})
+        M.list = gen_list(new_path)
+        set_list_to_buffer(M.list, M.mod.buf, new_path)
+        vim.api.nvim_win_set_config(M.mod.win, {title = gen_title(M.bufferPath)})
+    end, {buffer = M.mod.buf})
 
     utils.kmap('n', M.config.keybinds.close, function()
         if self.config.write_on_exit then
             self:write()
         end
 
-        commons.close(main)
-    end, {buffer = main.buf})
+        commons.close(M.mod)
+    end, {buffer = M.mod.buf})
 
     utils.kmap('n', M.config.keybinds.write_prompt, function()
         self:write()
-    end, {buffer = main.buf})
+    end, {buffer = M.mod.buf})
 
     utils.kmap('n', M.config.keybinds.go_to, function()
         local row = vim.api.nvim_win_get_cursor(0)[1]
-        local line = vim.api.nvim_buf_get_lines(main.buf, row - 1, row, false)[1]
+        local line = vim.api.nvim_buf_get_lines(M.mod.buf, row - 1, row, false)[1]
 
         if line:sub(-1) == '/' then
-            self:goto(line, main.buf, main.win)
+            self:goto(line, M.mod.buf, M.mod.win)
         else
             self:edit(M.bufferPath .. '/' .. line)
-            commons.close(main)
+            commons.close(M.mod)
         end
-    end, {buffer = main.buf})
+    end, {buffer = M.mod.buf})
 
     utils.kmap('n', M.config.keybinds.rename_file, function()
         local row = vim.api.nvim_win_get_cursor(0)[1]
-        local line = vim.api.nvim_buf_get_lines(main.buf, row - 1, row, false)[1]
+        local line = vim.api.nvim_buf_get_lines(M.mod.buf, row - 1, row, false)[1]
 
         rename_window.spawn(line, M.bufferPath .. '/',
             function()
-                set_list_to_buffer(gen_list(M.bufferPath), main.buf)
+                set_list_to_buffer(gen_list(M.bufferPath), M.mod.buf)
             end)
-    end, {buffer = main.buf})
+    end, {buffer = M.mod.buf})
 
     vim.api.nvim_create_autocmd("BufLeave", {
-        buffer = main.buf,
+        buffer = M.mod.buf,
         callback = function(_)
             self.is_active = false
         end
@@ -158,17 +159,22 @@ function M:write()
     local lines = vim.api.nvim_buf_get_lines(
         vim.api.nvim_get_current_buf(), 0, -1, false)
 
-    local actual = gen_list(self.bufferPath)
+    local current_path = M.bufferPath
+    local actual = gen_list(current_path)
     local additions = utils.get_diff(lines, actual)
     local deletions = utils.get_diff(actual, lines)
 
+    local b = vim.api.nvim_get_current_buf()
     if self.config.ask_confirmation then
         save_window.spawn(additions, deletions,
-            function() self.manage(additions, deletions) end)
+            function()
+                self.manage(additions, deletions)
+                set_list_to_buffer(gen_list(current_path), b, current_path)
+            end)
     else
         self.manage(additions, deletions)
+        set_list_to_buffer(gen_list(current_path), b, current_path)
     end
 end
-
 
 return M
