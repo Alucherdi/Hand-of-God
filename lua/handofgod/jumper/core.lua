@@ -1,6 +1,7 @@
 local utils = require('handofgod.utils')
 local data = require('handofgod.data')
 local commons = require('handofgod.commons')
+local ns = vim.api.nvim_create_namespace('HOGJumperNS')
 
 local M = { }
 
@@ -38,7 +39,10 @@ function M.explore()
 
     main.buf = vim.api.nvim_create_buf(false, true)
 
+    local files = data.get_files()
     vim.api.nvim_buf_set_lines(main.buf, 0, 1, false, data.get_files())
+    commons.set_icons(main.buf, files, ns, vim.uv.cwd())
+
     main.win = commons:create_window('Jumper', main.buf)
 
     utils.kmap('n', {'<Esc>', 'q'}, function()

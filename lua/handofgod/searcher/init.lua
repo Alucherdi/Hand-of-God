@@ -1,6 +1,7 @@
 local commons = require('handofgod.commons')
 local utils = require('handofgod.utils')
 local command = 'fd -c never -tf -I'
+local ns = vim.api.nvim_create_namespace('HOGSearcherNS')
 
 local M = {
     index = 1,
@@ -128,6 +129,7 @@ local function create_prompt(target)
             list = M.handle_contraction(list)
 
             vim.api.nvim_buf_set_lines(target.buf, 0, -1, false, list)
+            commons.set_icons(target.buf, list, ns, vim.uv.cwd())
         end
     })
 
@@ -143,6 +145,7 @@ local function create_list()
 
     local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, list)
+    commons.set_icons(buf, list, ns, vim.uv.cwd())
 
     local win, offset, size = commons:create_window('Searcher', buf, {
         style = 'minimal',
