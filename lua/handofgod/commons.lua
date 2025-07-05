@@ -39,6 +39,36 @@ function M:create_window(title, buf, opts)
     return window, offset, size
 end
 
+function M.set_icons(buf, paths, ns, current_path)
+    local mini_icons = _G.MiniIcons
+    if not mini_icons then
+        print('No setup for MiniIcons found')
+        return
+    end
+
+    if not current_path then
+        current_path = vim.fn.expand('%:p:h')
+    end
+
+    for i, v in ipairs(paths) do
+        local icon, hl
+        local name = vim.fn.fnamemodify(v, ':t')
+        local absolute_path = current_path .. '/' .. v
+
+        local isdir = vim.fn.isdirectory(absolute_path)
+        if isdir == 1 then
+            icon, hl = mini_icons.get('directory', name)
+        else
+            icon, hl = mini_icons.get('file', name)
+        end
+
+        vim.api.nvim_buf_set_extmark(buf, ns, i - 1, 0, {
+            sign_text = icon,
+            sign_hl_group = hl,
+        })
+    end
+end
+
 function M.close(mod)
     if not mod or not mod.win or not mod.buf then
         return

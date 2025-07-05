@@ -44,29 +44,7 @@ local function set_list_to_buffer(list, listbuf, current_path)
     end
 
     vim.api.nvim_buf_set_lines(listbuf, 0, -1, false, list)
-
-    local mini_icons = _G.MiniIcons
-
-    if not mini_icons then return end
-
-    for i, v in ipairs(list) do
-        local icon, hl
-        local name = vim.fn.fnamemodify(v, ':t')
-        local absolute_path = current_path .. '/' .. v
-
-        local isdir = vim.fn.isdirectory(absolute_path)
-        if isdir == 1 then
-            icon, hl = mini_icons.get('directory', name)
-        else
-            icon, hl = mini_icons.get('file', name)
-        end
-
-        vim.api.nvim_buf_set_extmark(listbuf, ns, i - 1, 0, {
-            sign_text = icon,
-            sign_hl_group = hl,
-        })
-    end
-
+    commons.set_icons(listbuf, list, ns, current_path)
 end
 
 function M:setup(config)
