@@ -1,6 +1,79 @@
 local M = {
     separator = '[HOG_SEP]'
 }
+local function win_size()
+    return vim.o.columns, vim.o.lines - vim.o.cmdheight - (vim.o.laststatus > 0 and 1 or 0)
+end
+
+local min = {
+    w = 64,
+    h = 20,
+}
+
+local function get_offset()
+    local cw, ch = win_size()
+
+    local x = 16
+    local y = 4
+
+    if cw <= min.w then x = 0 end
+    if ch <= min.h then y = 0 end
+
+    return x, y
+end
+
+function M.create_prompted_window(prompt_title, main_title)
+    local x, py = get_offset()
+    local w, h = win_size()
+    local y = py + 2
+    local ph = 1
+    h = h - (y * 2)
+    h = (h < 0 and 1 or h)
+    w = w - (x * 2)
+
+    local prompt = {
+        buf = nil,
+        win = nil,
+        conf = {
+            relative = 'editor',
+            title = prompt_title,
+            border = 'single',
+            title_pos = 'center',
+            style = 'minimal',
+            height = ph,
+            width = w,
+            row = py,
+            col = x
+        }
+    }
+
+    local main = {
+        buf = nil,
+        win = nil,
+        conf = {
+            relative = 'editor',
+            title = main_title,
+            border = 'single',
+            title_pos = 'center',
+            style = 'minimal',
+            height = h,
+            width = w,
+            row = y,
+            col = x
+        }
+    }
+
+    prompt.buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_set_option_value('buftype', 'prompt', {buf = prompt.buf})
+    vim.fn.prompt_setprompt(prompt.buf, '')
+    prompt.win = vim.api.nvim_open_win(prompt.buf, true, prompt.conf)
+
+    main.buf = vim.api.nvim_create_buf(false, true)
+    main.win = vim.api.nvim_open_win(main.buf, true, main.conf)
+    vim.cmd('set cursorline')
+
+    return prompt, main
+end
 
 function M:create_window(title, buf, opts)
     local options = opts or {}

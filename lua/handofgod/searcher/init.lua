@@ -24,6 +24,19 @@ function M:setup(config)
     end
 end
 
+function M:open()
+    M.host = vim.api.nvim_get_current_win()
+    M.original = M.get_files()
+    M.list = M.original
+
+    local prompt, main = commons.create_prompted_window('fd', '')
+    M.manage_main(main)
+    M.manage_prompt(main, prompt)
+
+    vim.api.nvim_set_current_win(prompt.win)
+    vim.cmd('startinsert')
+end
+
 function M:match_to(line)
     local list = {}
     for _, v in ipairs(self.original) do
@@ -40,7 +53,7 @@ function M:edit(path)
     vim.cmd("edit " .. vim.fn.expand(vim.fn.fnamemodify(path, ':.')))
 end
 
-local function get_files()
+function M.get_files()
     local output = vim.fn.system(command)
 
     if vim.v.shell_error ~= 0 then
@@ -72,47 +85,34 @@ local function move_cursor_keymaps(target, buf)
     end, {buffer = buf})
 end
 
-local function create_prompt(target)
-    local main = {}
-    if not main then return end
-
-    main.buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_set_option_value('buftype', 'prompt', {buf = main.buf})
-    vim.fn.prompt_setprompt(main.buf, '')
-
-    main.win = commons:create_window('input', main.buf, {
-        style = 'minimal',
-        row = target.offset.y - 2,
-        col = target.offset.x,
-        height = 1
-    })
-
+function M.manage_prompt(main, prompt)
     utils.kmap('n', {'q', '<Esc>'}, function()
-        commons.close(main)
-    end, {buffer = main.buf})
+        commons.close(prompt)
+    end, {buffer = prompt.buf})
 
     utils.kmap('i', '<Esc>', function()
-        commons.close(main)
-    end, {buffer = main.buf})
+        commons.close(prompt)
+        vim.api.nvim_set_current_win(M.host)
+    end, {buffer = prompt.buf})
 
     utils.kmap('i', '<CR>', function()
-        commons.close(main)
+        commons.close(prompt)
         M:edit(M.list[M.index])
-    end, {buffer = main.buf})
+    end, {buffer = prompt.buf})
 
-    move_cursor_keymaps(target, main.buf)
+    move_cursor_keymaps(main, prompt.buf)
 
     vim.api.nvim_create_autocmd('bufLeave', {
-        buffer = main.buf,
+        buffer = prompt.buf,
         callback = function()
-            if vim.api.nvim_win_is_valid(target.win) then
-                vim.api.nvim_win_close(target.win, true)
+            if vim.api.nvim_win_is_valid(main.win) then
+                vim.api.nvim_win_close(main.win, true)
             end
         end
     })
 
     vim.api.nvim_create_autocmd('TextChangedI', {
-        buffer = main.buf,
+        buffer = prompt.buf,
         callback = function(_)
             M.index = 1
 
@@ -128,40 +128,22 @@ local function create_prompt(target)
             local list = M.list
             list = M.handle_contraction(list)
 
-            vim.api.nvim_buf_set_lines(target.buf, 0, -1, false, list)
-            commons.set_icons(target.buf, M.list, ns, vim.uv.cwd())
+            vim.api.nvim_buf_set_lines(main.buf, 0, -1, false, list)
+            commons.set_icons(main.buf, M.list, ns, vim.uv.cwd())
         end
     })
 
-    vim.cmd('startinsert')
 end
 
-local function create_list()
-    M.host = vim.api.nvim_get_current_win()
-
+function M.manage_main(main)
     M.index = 1
     local list = M.list
     list = M.handle_contraction(list)
 
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, list)
-    commons.set_icons(buf, list, ns, vim.uv.cwd())
-
-    local win, offset, size = commons:create_window('Searcher', buf, {
-        style = 'minimal',
-    })
-    vim.cmd('set cursorline')
-
-    return {buf = buf, win = win, offset = offset, size = size}
+    vim.api.nvim_buf_set_lines(main.buf, 0, -1, false, list)
+    commons.set_icons(main.buf, list, ns, vim.uv.cwd())
 end
 
-function M:open()
-    M.original = get_files()
-    M.list = M.original
-
-    local list_module = create_list()
-    create_prompt(list_module)
-end
 
 function M.handle_contraction(list)
     if M.config.contract_on_large_paths then
