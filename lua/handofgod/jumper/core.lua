@@ -34,16 +34,11 @@ function M.rewrite(lines)
 end
 
 function M.explore()
-    local main = {}
-    if not main then return end
-
-    main.buf = vim.api.nvim_create_buf(false, true)
+    local main = commons:create_window('Jumper')
 
     local files = data.get_files()
-    vim.api.nvim_buf_set_lines(main.buf, 0, 1, false, data.get_files())
+    vim.api.nvim_buf_set_lines(main.buf, 0, 1, false, files)
     commons.set_icons(main.buf, files, ns, vim.uv.cwd())
-
-    main.win = commons:create_window('Jumper', main.buf)
 
     utils.kmap('n', {'<Esc>', 'q'}, function()
         local lines = vim.api.nvim_buf_get_lines(main.buf, 0, -1, false)

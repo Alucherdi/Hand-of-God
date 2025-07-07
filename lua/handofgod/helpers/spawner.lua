@@ -6,7 +6,6 @@ local M = {
 
 function M.stop()
     if M.process then
-        print(M.process:kill(9) or 'nil')
         M.process = nil
     end
 end

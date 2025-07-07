@@ -4,11 +4,6 @@ local commons = require('handofgod.commons')
 local aborted = false
 
 local M = {
-    main = {
-        list = {
-            size = 0
-        }
-    },
     prompt = {},
     pattern = '',
     line_cap = 10000,
@@ -19,8 +14,11 @@ function M.setup(config)
 end
 
 function M.open()
-    M.create_list()
-    M.create_prompt()
+    M.prompt, M.main = commons.create_prompted_window('Greper', '')
+    M.main.list = { size = 0 }
+
+    M.manage_list()
+    M.manage_prompt()
 end
 
 function M.close()
@@ -47,19 +45,7 @@ function M.abort()
     aborted = true
 end
 
-function M.create_prompt()
-    M.prompt.buf = vim.api.nvim_create_buf(false, true)
-
-    vim.api.nvim_set_option_value('buftype', 'prompt', {buf = M.prompt.buf})
-    vim.fn.prompt_setprompt(M.prompt.buf, '')
-
-    M.prompt.win, M.prompt.offset, M.prompt.size = commons:create_window('Grep', M.prompt.buf, {
-        style = 'minimal',
-        width = M.main.size.width,
-        row = M.main.offset.y - 2,
-        height = 1
-    })
-
+function M.manage_prompt()
     vim.api.nvim_create_autocmd('TextChangedI', {
         buffer = M.prompt.buf,
         callback = function(_)
@@ -74,10 +60,11 @@ function M.create_prompt()
 
     vim.keymap.set('i', '<CR>', function()
         M.execute_command(M.pattern)
-        M.close_module(M.prompt)
+        vim.api.nvim_set_current_win(M.main.win)
     end, {buffer = M.prompt.buf})
 
 
+    vim.api.nvim_set_current_win(M.prompt.win)
     vim.cmd('startinsert')
 end
 
@@ -86,17 +73,12 @@ function M.goto(path, cursor)
     vim.api.nvim_win_set_cursor(0, cursor)
 end
 
-function M.create_list()
-    M.main.buf = vim.api.nvim_create_buf(false, true)
+function M.manage_list()
     local options = vim.bo[M.main.buf]
 
     options.buftype = 'nowrite'
     options.bufhidden = 'wipe'
     options.swapfile = false
-
-    M.main.win, M.main.offset, M.main.size = commons:create_window('', M.main.buf, {
-        width = 80
-    })
 
     vim.keymap.set('n', 'q', function() M.close() end, {buffer = M.main.buf})
     vim.keymap.set('n', '<Esc>', function() M.close() end, {buffer = M.main.buf})
@@ -111,9 +93,7 @@ function M.create_list()
     end, {buffer = M.main.buf})
 
     vim.keymap.set('n', '<C-f>', function()
-        M.create_prompt()
-        vim.api.nvim_buf_set_lines(M.prompt.buf, 0, -1, false, {M.pattern})
-        vim.api.nvim_win_set_cursor(M.prompt.win, {1, #M.pattern})
+        vim.api.nvim_set_current_win(M.prompt.win)
     end, {buffer = M.main.buf})
 
     vim.o.cursorline = true

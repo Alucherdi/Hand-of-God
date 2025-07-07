@@ -1,7 +1,7 @@
 local M = {
     separator = '[HOG_SEP]'
 }
-local function win_size()
+function M.win_size()
     return vim.o.columns, vim.o.lines - vim.o.cmdheight - (vim.o.laststatus > 0 and 1 or 0)
 end
 
@@ -11,7 +11,7 @@ local min = {
 }
 
 local function get_offset()
-    local cw, ch = win_size()
+    local cw, ch = M.win_size()
 
     local x = 16
     local y = 4
@@ -24,7 +24,7 @@ end
 
 function M.create_prompted_window(prompt_title, main_title)
     local x, py = get_offset()
-    local w, h = win_size()
+    local w, h = M.win_size()
     local y = py + 2
     local ph = 1
     h = h - (y * 2)
@@ -75,41 +75,29 @@ function M.create_prompted_window(prompt_title, main_title)
     return prompt, main
 end
 
-function M:create_window(title, buf, opts)
-    local options = opts or {}
+function M:create_window(title)
+    local x, y = get_offset()
+    local w, h = M.win_size()
+    w = w - (x * 2)
+    h = h - (y * 2)
 
-    local size = {
-        width = options.width or 60,
-        height = options.height or 30
+    local main = {
+        win = nil,
+        buf = nil,
+        conf = {
+            relative = 'editor',
+            style = 'minimal',
+            title = title,
+            border = 'single',
+            title_pos = 'center',
+            height = h, width = w, row = y, col = x
+        }
     }
 
-    local offset = {
-        x = (vim.o.columns / 2) - (size.width / 2),
-        y = math.ceil(vim.o.lines / 2) - math.ceil(size.height / 2),
-    }
+    main.buf = vim.api.nvim_create_buf(false, true)
+    main.win = vim.api.nvim_open_win(main.buf, true, main.conf)
 
-    local default = {
-        relative = 'editor',
-        title = title,
-        border = 'single',
-        title_pos = 'center',
-        height = size.height,
-        width = size.width,
-        row = offset.y,
-        col = offset.x
-    }
-
-    local opts
-
-    if options then
-        opts = vim.tbl_extend('force', default, options)
-    else
-        opts = default
-    end
-
-    local window = vim.api.nvim_open_win(buf, true, opts)
-
-    return window, offset, size
+    return main
 end
 
 function M.set_icons(buf, paths, ns, current_path)
@@ -123,10 +111,9 @@ function M.set_icons(buf, paths, ns, current_path)
         current_path = vim.fn.expand('%:p:h')
     end
 
-    local id = vim.api.del
     if #paths == 0 then
         local extmarks = vim.api.nvim_buf_get_extmarks(buf, ns, 0, -1, {})
-        for i, v in ipairs(extmarks) do
+        for _, v in ipairs(extmarks) do
             vim.api.nvim_buf_del_extmark(buf, ns, v[1])
         end
     end

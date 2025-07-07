@@ -61,14 +61,8 @@ function M:open()
     M.host = vim.api.nvim_get_current_win()
     M.list = gen_list()
 
-    M.mod.buf = vim.api.nvim_create_buf(false, true)
+    M.mod = commons:create_window(gen_title(M.bufferPath))
     set_list_to_buffer(M.list, M.mod.buf)
-
-    M.mod.win = commons:create_window(
-        gen_title(M.bufferPath),
-        M.mod.buf, {
-            style = 'minimal'
-        })
 
     utils.kmap('n', M.config.keybinds.push_back, function()
         local new_path = vim.fn.fnamemodify(M.bufferPath, ':h')

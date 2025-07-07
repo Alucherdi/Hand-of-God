@@ -9,10 +9,8 @@ vim.api.nvim_create_autocmd("BufEnter", {
         local cursor = data.get_cursor(file)
         if not cursor then return end
 
-        local success, _ = pcall(function() vim.api.nvim_win_set_cursor(0, cursor) end)
-        if not success then
-            print(_)
-        end
+        local _, _ = pcall(function() vim.api.nvim_win_set_cursor(0, cursor) end)
+        -- if not success then print(_) end
     end
 })
 

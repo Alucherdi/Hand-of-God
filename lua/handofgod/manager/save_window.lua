@@ -1,6 +1,14 @@
 local utils = require('handofgod.utils')
-local commons = require('handofgod.commons')
 local ns = vim.api.nvim_create_namespace("HOGManagerHL")
+
+local function longest_name(list)
+    local size = 9
+    for _, v in ipairs(list) do
+        if size < #v then size = #v end
+    end
+
+    return size
+end
 
 local M = {}
 
@@ -12,9 +20,14 @@ function M.spawn(additions, deletions, confirmation_callback)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, list)
     M.set_buf_properties(buf, #additions, #deletions)
 
-    local win = commons:create_window('Save? y/n', buf, {
+    local win = vim.api.nvim_open_win(buf, true, {
+        relative = 'cursor',
+        title = 'Save? y/n',
+        title_pos = 'center',
+        border = 'single',
         style = 'minimal',
-        width = 20, height = #list,
+        width = longest_name(list), height = #list,
+        row = 0, col = 0
     })
 
     utils.kmap('n', 'y', function()
