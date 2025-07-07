@@ -79,6 +79,16 @@ function M.manage_list()
     options.buftype = 'nowrite'
     options.bufhidden = 'wipe'
     options.swapfile = false
+    vim.api.nvim_create_autocmd('CursorMoved', {
+        buffer = M.main.buf,
+        callback = function(_)
+            local cursor = vim.api.nvim_win_get_cursor(M.main.win)
+            vim.api.nvim_win_set_config(M.main.win, {
+                title = cursor[1] .. '/' .. M.main.list.size,
+            })
+        end,
+    })
+
 
     vim.keymap.set('n', 'q', function() M.close() end, {buffer = M.main.buf})
     vim.keymap.set('n', '<Esc>', function() M.close() end, {buffer = M.main.buf})
