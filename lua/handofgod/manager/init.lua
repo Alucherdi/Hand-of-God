@@ -37,8 +37,8 @@ local function gen_title(path)
 end
 
 local function gen_list(path)
-    M.bufferPath = path or vim.fn.expand('%:p:h')
-    return data.ls(M.bufferPath, M.config.ignore)
+    M.buffer_path = path or vim.fn.expand('%:p:h')
+    return data.ls(M.buffer_path, M.config.ignore)
 end
 
 local function set_list_to_buffer(list, listbuf, current_path)
@@ -58,17 +58,19 @@ function M:setup(config)
 end
 
 function M:open()
+    M.buffer_path = vim.fn.expand('%:p:h')
+
     M.host = vim.api.nvim_get_current_win()
     M.list = gen_list()
 
-    M.mod = commons:create_window(gen_title(M.bufferPath))
-    set_list_to_buffer(M.list, M.mod.buf)
+    M.mod = commons:create_window(gen_title(M.buffer_path))
+    set_list_to_buffer(M.list, M.mod.buf, M.buffer_path)
 
     utils.kmap('n', M.config.keybinds.push_back, function()
-        local new_path = vim.fn.fnamemodify(M.bufferPath, ':h')
+        local new_path = vim.fn.fnamemodify(M.buffer_path, ':h')
         M.list = gen_list(new_path)
         set_list_to_buffer(M.list, M.mod.buf, new_path)
-        vim.api.nvim_win_set_config(M.mod.win, {title = gen_title(M.bufferPath)})
+        vim.api.nvim_win_set_config(M.mod.win, {title = gen_title(M.buffer_path)})
     end, {buffer = M.mod.buf})
 
     utils.kmap('n', M.config.keybinds.close, function()
@@ -90,7 +92,7 @@ function M:open()
         if line:sub(-1) == '/' then
             self:goto(line, M.mod.buf, M.mod.win)
         else
-            self:edit(M.bufferPath .. '/' .. line)
+            self:edit(M.buffer_path .. '/' .. line)
             commons.close(M.mod)
         end
     end, {buffer = M.mod.buf})
@@ -99,9 +101,9 @@ function M:open()
         local row = vim.api.nvim_win_get_cursor(0)[1]
         local line = vim.api.nvim_buf_get_lines(M.mod.buf, row - 1, row, false)[1]
 
-        rename_window.spawn(line, M.bufferPath .. '/',
+        rename_window.spawn(line, M.buffer_path .. '/',
             function()
-                set_list_to_buffer(gen_list(M.bufferPath), M.mod.buf)
+                set_list_to_buffer(gen_list(M.buffer_path), M.mod.buf)
             end)
     end, {buffer = M.mod.buf})
 
@@ -115,19 +117,19 @@ end
 
 function M.manage(additions, subtractions)
     for _, path in ipairs(additions) do
-        local dir = M.bufferPath .. '/' .. vim.fn.fnamemodify(path, ':h')
+        local dir = M.buffer_path .. '/' .. vim.fn.fnamemodify(path, ':h')
         if dir then vim.fn.mkdir(dir, 'p') end
 
         if path:sub(-1) ~= '/' then
-            vim.fn.writefile({}, M.bufferPath .. '/' .. path)
+            vim.fn.writefile({}, M.buffer_path .. '/' .. path)
         end
     end
 
     for _, path in ipairs(subtractions) do
-        local result = vim.fn.delete(M.bufferPath .. '/' .. path, 'rf')
+        local result = vim.fn.delete(M.buffer_path .. '/' .. path, 'rf')
 
         if result == 0 then
-            local relative = vim.fn.fnamemodify(M.bufferPath, ':.') .. '/' .. path
+            local relative = vim.fn.fnamemodify(M.buffer_path, ':.') .. '/' .. path
             local index = utils.index_of(data.list, relative, 'key')
             if index ~= -1 then
                 data.list[index] = nil
@@ -137,11 +139,11 @@ function M.manage(additions, subtractions)
 end
 
 function M:goto(path, buf, window)
-    local new_path = M.bufferPath .. '/' .. path:sub(0, -2)
+    local new_path = M.buffer_path .. '/' .. path:sub(0, -2)
     local list = gen_list(new_path)
 
     set_list_to_buffer(list, buf, new_path)
-    vim.api.nvim_win_set_config(window, {title = gen_title(M.bufferPath)})
+    vim.api.nvim_win_set_config(window, {title = gen_title(M.buffer_path)})
 end
 
 function M:edit(path)
@@ -153,7 +155,7 @@ function M:write()
     local lines = vim.api.nvim_buf_get_lines(
         vim.api.nvim_get_current_buf(), 0, -1, false)
 
-    local current_path = M.bufferPath
+    local current_path = M.buffer_path
     local actual = gen_list(current_path)
     local additions = utils.get_diff(lines, actual)
     local deletions = utils.get_diff(actual, lines)
