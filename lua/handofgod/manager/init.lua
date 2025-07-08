@@ -167,7 +167,11 @@ function M:write()
                 self.manage(additions, deletions)
                 set_list_to_buffer(gen_list(current_path), b, current_path)
                 print('Files modified')
-            end)
+            end,
+            function()
+                set_list_to_buffer(gen_list(current_path), b, current_path)
+            end
+        )
     else
         self.manage(additions, deletions)
         set_list_to_buffer(gen_list(current_path), b, current_path)

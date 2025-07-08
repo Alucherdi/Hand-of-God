@@ -1,3 +1,4 @@
+local commons = require('handofgod.commons')
 local utils = require('handofgod.utils')
 local ns = vim.api.nvim_create_namespace("HOGManagerHL")
 
@@ -17,43 +18,25 @@ vim.api.nvim_set_hl(0,"HOGDiffDelete", {
     bold = true
 })
 
-local function longest_name(list)
-    local size = 9
-    for _, v in ipairs(list) do
-        if size < #v then size = #v end
-    end
-
-    return size
-end
-
 local M = {}
 
-function M.spawn(additions, deletions, confirmation_callback)
+function M.spawn(additions, deletions, confirmation_callback, cancellation_callback)
     local list = utils.merge_list(additions, deletions)
     if #list == 0 then return end
 
-    local buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, list)
-    M.set_buf_properties(buf, #additions, #deletions)
-
-    local win = vim.api.nvim_open_win(buf, true, {
-        relative = 'cursor',
-        title = 'Save? y/n',
-        title_pos = 'center',
-        border = 'single',
-        style = 'minimal',
-        width = longest_name(list), height = #list,
-        row = 0, col = 0
-    })
+    local mod = commons:create_window('Save? y/n')
+    vim.api.nvim_buf_set_lines(mod.buf, 0, -1, false, list)
+    M.set_buf_properties(mod.buf, #additions, #deletions)
 
     utils.kmap('n', 'y', function()
         confirmation_callback()
-        vim.api.nvim_win_close(win, true)
-    end, {buffer = buf, nowait = true, noremap = true})
+        vim.api.nvim_win_close(mod.win, true)
+    end, {buffer = mod.buf, nowait = true, noremap = true})
 
     utils.kmap('n', 'n', function()
-        vim.api.nvim_win_close(win, true)
-    end, {buffer = buf, nowait = true, noremap = true})
+        cancellation_callback()
+        vim.api.nvim_win_close(mod.win, true)
+    end, {buffer = mod.buf, nowait = true, noremap = true})
 end
 
 function M.set_buf_properties(buf, adds, subs)
@@ -66,7 +49,9 @@ function M.set_buf_properties(buf, adds, subs)
         vim.api.nvim_buf_set_extmark(buf, ns, 0, 0, {
             end_row = adds,
             hl_eol = true,
-            hl_group = "HOGDiffAdd",
+            hl_group = 'HOGDiffAdd',
+            sign_text = '+',
+            sign_hl_group = 'HOGDiffAdd'
         })
     end
 
@@ -74,7 +59,9 @@ function M.set_buf_properties(buf, adds, subs)
         vim.api.nvim_buf_set_extmark(buf, ns, adds, 0, {
             end_row = adds + subs,
             hl_eol = true,
-            hl_group = "HOGDiffDelete",
+            hl_group = 'HOGDiffDelete',
+            sign_text = '-',
+            sign_hl_group = 'HOGDiffDelete',
         })
     end
 end
