@@ -13,8 +13,8 @@ local min = {
 local function get_offset()
     local cw, ch = M.win_size()
 
-    local x = 16
-    local y = 4
+    local x = math.floor((cw * 0.2) + 0.5)
+    local y = math.floor((ch * 0.1) + 0.5)
 
     if cw <= min.w then x = 0 end
     if ch <= min.h then y = 0 end
