@@ -126,10 +126,19 @@ function M.manage(additions, subtractions)
     end
 
     for _, path in ipairs(subtractions) do
-        local result = vim.fn.delete(M.buffer_path .. '/' .. path, 'rf')
+        local file_path = M.buffer_path .. '/' .. path
+        local result = vim.fn.delete(file_path, 'rf')
 
-        if result == 0 then
-            local relative = vim.fn.fnamemodify(M.buffer_path, ':.') .. '/' .. path
+        if result == -1 then return end
+        local relative = vim.fn.fnamemodify(file_path, ':.')
+
+        if file_path:sub(-1) == '/' then
+            for index, v in ipairs(data.list) do
+                if v.key:match('^' .. relative) then
+                    data.list[index] = nil
+                end
+            end
+        else
             local index = utils.index_of(data.list, relative, 'key')
             if index ~= -1 then
                 data.list[index] = nil
