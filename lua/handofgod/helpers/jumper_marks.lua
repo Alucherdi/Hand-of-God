@@ -38,7 +38,7 @@ function M.set_mark_at(buf, ns, index, jumper_index)
         opts.id = current
     end
 
-    local i = vim.api.nvim_buf_set_extmark(buf, ns, index - 1, index, opts)
+    local i = vim.api.nvim_buf_set_extmark(buf, ns, index, 0, opts)
 
     if not current then
         M.marks[index] =  i
