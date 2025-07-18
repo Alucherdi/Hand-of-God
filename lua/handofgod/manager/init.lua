@@ -66,6 +66,18 @@ function M:open()
     M.mod = commons:create_window(gen_title(M.buffer_path))
     set_list_to_buffer(M.list, M.mod.buf, M.buffer_path)
 
+    utils.kmap('n', '<leader>a', function()
+        local row = vim.api.nvim_win_get_cursor(0)[1]
+        local path = vim.fn.fnamemodify(M.buffer_path .. '/' .. M.list[row], ':.')
+        local jumplist_index = utils.index_of(data.list, path, 'key')
+        if jumplist_index ~= -1 then
+            table.remove(data.list, jumplist_index)
+            return
+        end
+
+        data.add(path)
+    end, {buffer = M.mod.buf})
+
     utils.kmap('n', M.config.keybinds.push_back, function()
         local new_path = vim.fn.fnamemodify(M.buffer_path, ':h')
         M.list = gen_list(new_path)
@@ -149,9 +161,9 @@ end
 
 function M:goto(path, buf, window)
     local new_path = M.buffer_path .. '/' .. path:sub(0, -2)
-    local list = gen_list(new_path)
+    M.list = gen_list(new_path)
 
-    set_list_to_buffer(list, buf, new_path)
+    set_list_to_buffer(M.list, buf, new_path)
     vim.api.nvim_win_set_config(window, {title = gen_title(M.buffer_path)})
 end
 
