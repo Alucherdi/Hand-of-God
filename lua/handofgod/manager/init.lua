@@ -1,11 +1,11 @@
 local commons = require('handofgod.commons')
 local utils   = require('handofgod.utils')
-
 local save_window = require('handofgod.manager.save_window')
 local rename_window = require('handofgod.manager.rename_window')
+local data = require('handofgod.data')
+local marker = require('handofgod.helpers.jumper_marks')
 
 local ns = vim.api.nvim_create_namespace('HOGManagerNS')
-local data = require('handofgod.data')
 
 local M = {
     config = {
@@ -19,13 +19,15 @@ local M = {
             push_back = '<BS>',
             close = {'<Esc>', 'q'},
             go_to = '<CR>',
+            add_to_jump_list = '<leader>a'
         },
     },
 
     mod = {},
     host = nil,
     is_active = false,
-    files = {}
+    files = {},
+    being_modified = false
 }
 
 local function gen_title(path)
@@ -49,6 +51,9 @@ local function set_list_to_buffer(list, listbuf, current_path)
 
     vim.api.nvim_buf_set_lines(listbuf, 0, -1, false, list)
     commons.set_icons(listbuf, list, ns, current_path)
+    marker.set_manager_marks(listbuf, ns, utils.map(list, function(el)
+        return vim.fn.fnamemodify(M.buffer_path .. '/' .. el, ':.')
+    end))
 end
 
 function M:setup(config)
@@ -64,21 +69,29 @@ function M:open()
     M.list = gen_list()
 
     M.mod = commons:create_window(gen_title(M.buffer_path))
+    marker.remove_marks(M.mod.buf, ns)
+
     set_list_to_buffer(M.list, M.mod.buf, M.buffer_path)
 
-    utils.kmap('n', '<leader>a', function()
+    utils.kmap('n', M.config.keybinds.add_to_jump_list, function()
         local row = vim.api.nvim_win_get_cursor(0)[1]
         local path = vim.fn.fnamemodify(M.buffer_path .. '/' .. M.list[row], ':.')
         local jumplist_index = utils.index_of(data.list, path, 'key')
         if jumplist_index ~= -1 then
             table.remove(data.list, jumplist_index)
+            marker.remove_mark_at(M.mod.buf, ns, row)
+            marker.set_manager_marks(M.mod.buf, ns, utils.map(M.list, function(el)
+                return vim.fn.fnamemodify(M.buffer_path .. '/' .. el, ':.')
+            end))
             return
         end
 
         data.add(path)
+        marker.set_mark_at(M.mod.buf, ns, row)
     end, {buffer = M.mod.buf})
 
     utils.kmap('n', M.config.keybinds.push_back, function()
+        M.being_modified = false
         local new_path = vim.fn.fnamemodify(M.buffer_path, ':h')
         M.list = gen_list(new_path)
         set_list_to_buffer(M.list, M.mod.buf, new_path)
@@ -125,6 +138,36 @@ function M:open()
             self.is_active = false
         end
     })
+
+    vim.api.nvim_create_autocmd('TextChanged', {
+        buffer = M.mod.buf,
+        callback = function(_)
+            if M.being_modified then
+                marker.remove_marks(M.mod.buf, ns)
+            end
+            print(M.being_modified)
+            M.being_modified = true
+        end
+    })
+
+    vim.api.nvim_create_autocmd('TextChangedI', {
+        buffer = M.mod.buf,
+        callback = function(_)
+            if M.being_modified then
+                marker.remove_marks(M.mod.buf, ns)
+            end
+            print(M.being_modified)
+            M.being_modified = true
+        end
+    })
+
+    vim.api.nvim_create_autocmd('BufLeave', {
+        buffer = M.mod.buf,
+        callback = function(_)
+            M.being_modified = false
+            marker.remove_marks(M.mod.buf, ns)
+        end
+    })
 end
 
 function M.manage(additions, subtractions)
@@ -160,6 +203,7 @@ function M.manage(additions, subtractions)
 end
 
 function M:goto(path, buf, window)
+    M.being_modified = false
     local new_path = M.buffer_path .. '/' .. path:sub(0, -2)
     M.list = gen_list(new_path)
 

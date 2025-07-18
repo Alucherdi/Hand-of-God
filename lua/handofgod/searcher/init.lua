@@ -2,7 +2,7 @@ local commons = require('handofgod.commons')
 local utils = require('handofgod.utils')
 local command = 'fd -c never -tf -I'
 
-local marks = require('handofgod.searcher.jumper_marks')
+local marker = require('handofgod.helpers.jumper_marks')
 
 local data = require('handofgod.data')
 local ns = vim.api.nvim_create_namespace('HOGSearcherNS')
@@ -34,6 +34,7 @@ function M:open()
     M.list = M.original
 
     local prompt, main = commons.create_prompted_window('fd', '')
+    marker.remove_marks(main.buf, ns)
     M.manage_main(main)
     M.manage_prompt(main, prompt)
 
@@ -109,13 +110,13 @@ function M.manage_prompt(main, prompt)
         print(index)
         if index ~= -1 then
             table.remove(data.list, index)
-            marks.remove_mark_at(main.buf, ns, M.index)
-            marks.set_marks(main.buf, ns)
+            marker.remove_mark_at(main.buf, ns, M.index)
+            marker.set_searcher_marks(main.buf, ns)
             return
         end
 
         data.add(M.list[M.index])
-        marks.set_mark_at(main.buf, ns, M.index)
+        marker.set_mark_at(main.buf, ns, M.index)
     end, {buffer = prompt.buf})
 
     move_cursor_keymaps(main, prompt.buf)
@@ -126,6 +127,7 @@ function M.manage_prompt(main, prompt)
             if vim.api.nvim_win_is_valid(main.win) then
                 vim.api.nvim_win_close(main.win, true)
             end
+            marker.remove_marks(main.buf, ns)
         end
     })
 
@@ -148,7 +150,7 @@ function M.manage_prompt(main, prompt)
 
             vim.api.nvim_buf_set_lines(main.buf, 0, -1, false, list)
             commons.set_icons(main.buf, M.list, ns, vim.uv.cwd())
-            marks.set_marks(main.buf, ns)
+            marker.set_searcher_marks(main.buf, ns)
         end
     })
 
@@ -161,7 +163,7 @@ function M.manage_main(main)
 
     vim.api.nvim_buf_set_lines(main.buf, 0, -1, false, list)
     commons.set_icons(main.buf, list, ns, vim.uv.cwd())
-    marks.set_marks(main.buf, ns)
+    marker.set_searcher_marks(main.buf, ns)
 end
 
 
