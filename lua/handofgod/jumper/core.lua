@@ -3,7 +3,9 @@ local data = require('handofgod.data')
 local commons = require('handofgod.commons')
 local ns = vim.api.nvim_create_namespace('HOGJumperNS')
 
-local M = { }
+local M = {
+    host = nil
+}
 
 function M.setup()
     data.load()
@@ -34,6 +36,7 @@ function M.rewrite(lines)
 end
 
 function M.explore()
+    M.host = vim.api.nvim_get_current_win()
     local main = commons:create_window('Jumper')
 
     local files = data.get_files()
@@ -45,6 +48,16 @@ function M.explore()
 
         M.rewrite(lines)
         commons.close(main)
+    end, { buffer = main.buf })
+
+    utils.kmap('n','<CR>', function ()
+        local row = vim.api.nvim_win_get_cursor(0)[1]
+        local line = vim.api.nvim_buf_get_lines(main.buf, row - 1, row, false)[1]
+
+        vim.api.nvim_set_current_win(M.host)
+        vim.cmd("edit " .. line)
+        commons.close(main)
+
     end, { buffer = main.buf })
 end
 
