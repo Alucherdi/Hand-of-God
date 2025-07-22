@@ -145,7 +145,6 @@ function M:open()
             if M.being_modified then
                 marker.remove_marks(M.mod.buf, ns)
             end
-            print(M.being_modified)
             M.being_modified = true
         end
     })
@@ -156,7 +155,6 @@ function M:open()
             if M.being_modified then
                 marker.remove_marks(M.mod.buf, ns)
             end
-            print(M.being_modified)
             M.being_modified = true
         end
     })

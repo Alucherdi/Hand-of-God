@@ -107,7 +107,6 @@ function M.manage_prompt(main, prompt)
 
     utils.kmap('i', '<C-a>', function()
         local index = utils.index_of(data.list, M.list[M.index], 'key')
-        print(index)
         if index ~= -1 then
             table.remove(data.list, index)
             marker.remove_mark_at(main.buf, ns, M.index)

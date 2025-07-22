@@ -51,7 +51,6 @@ function M.remove_marks(buf, ns)
     end
 
     M.marks = {}
-    vim.print(M.marks)
 end
 
 function M.remove_mark_at(buf, ns, index)
