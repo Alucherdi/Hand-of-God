@@ -33,7 +33,7 @@ function M.spawn(name, path, callback)
         col = 0, row = 0
     })
 
-    vim.keymap.set({'n', 'i'}, '<Esc>', function()
+    vim.keymap.set({'n'}, '<Esc>', function()
         vim.api.nvim_win_close(win, true)
         vim.api.nvim_buf_delete(buf, { force = true })
     end, {buffer = buf})
