@@ -96,13 +96,6 @@ These keybindings are currently hardcoded but will be made configurable through 
 <C-f>       - Reopen the prompt inside the finder buffer
 ```
 
-#### 🗂️ File Manager
-
-```text
-q or <Esc>  - Quit the file manager and show a confirmation window for creating/deleting files/folders
-<leader>rn  - Open the rename window inside the file manager
-```
-
 #### ✏️ Rename Window
 
 ```text
