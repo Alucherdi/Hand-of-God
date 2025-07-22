@@ -45,6 +45,24 @@ vim.keymap.set("n", "<C-k>", function() jumper.jump_to(3) end)
 vim.keymap.set("n", "<C-l>", function() jumper.jump_to(4) end)
 
 local manager = require('handofgod.manager')
+manager:setup {
+    -- ignore paths or folders
+    ignore = {},
+    -- write automatically when closing the manager
+    write_on_exit = true,
+    -- ask for confirmation when you attempt to save
+    ask_confirmation = true,
+
+    --keybinds for each action
+    keybinds = {
+        rename_file = '<leader>rn',
+        write_prompt = '<leader>w',
+        push_back = '<BS>',
+        close = {'<Esc>', 'q'},
+        go_to = '<CR>',
+        add_to_jump_list = '<leader>a'
+    },
+}
 -- file explorer/manager
 vim.keymap.set("n", "<C-e>", function() manager:open() end)
 
