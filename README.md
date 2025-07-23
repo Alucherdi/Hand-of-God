@@ -62,6 +62,22 @@ manager:setup {
         go_to = '<CR>',
         add_to_jump_list = '<leader>a'
     },
+
+    -- rename window config
+    rename = {
+        keybinds = {
+            save_and_exit = 'q',
+            exit = '<Esc>'
+        }
+    },
+
+    -- save confirmation window config
+    save_confirmation = {
+        keybinds = {
+            confirm = 'y',
+            cancel  = 'n',
+        }
+    }
 }
 -- file explorer/manager
 vim.keymap.set("n", "<C-e>", function() manager:open() end)

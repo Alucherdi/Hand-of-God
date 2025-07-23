@@ -18,7 +18,12 @@ vim.api.nvim_set_hl(0,"HOGDiffDelete", {
     bold = true
 })
 
-local M = {}
+local M = {
+    keybinds = {
+        confirm = 'y',
+        cancel  = 'n',
+    }
+}
 
 function M.spawn(additions, deletions, confirmation_callback, cancellation_callback)
     local list = utils.merge_list(additions, deletions)
@@ -28,12 +33,12 @@ function M.spawn(additions, deletions, confirmation_callback, cancellation_callb
     vim.api.nvim_buf_set_lines(mod.buf, 0, -1, false, list)
     M.set_buf_properties(mod.buf, #additions, #deletions)
 
-    utils.kmap('n', 'y', function()
+    utils.kmap('n', M.keybinds.confirm, function()
         confirmation_callback()
         vim.api.nvim_win_close(mod.win, true)
     end, {buffer = mod.buf, nowait = true, noremap = true})
 
-    utils.kmap('n', 'n', function()
+    utils.kmap('n', M.keybinds.cancel, function()
         cancellation_callback()
         vim.api.nvim_win_close(mod.win, true)
     end, {buffer = mod.buf, nowait = true, noremap = true})

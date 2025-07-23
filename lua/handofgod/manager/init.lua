@@ -1,7 +1,7 @@
 local commons = require('handofgod.commons')
 local utils   = require('handofgod.utils')
-local save_window = require('handofgod.manager.save_window')
-local rename_window = require('handofgod.manager.rename_window')
+local save_window = require('handofgod.manager.save')
+local rename_window = require('handofgod.manager.rename')
 local data = require('handofgod.data')
 local marker = require('handofgod.helpers.jumper_marks')
 
@@ -21,6 +21,20 @@ local M = {
             go_to = '<CR>',
             add_to_jump_list = '<leader>a'
         },
+
+        rename = {
+            keybinds = {
+                save_and_exit = 'q',
+                exit = '<Esc>'
+            }
+        },
+
+        save_confirmation = {
+            keybinds = {
+                confirm = 'y',
+                cancel  = 'n',
+            }
+        }
     },
 
     mod = {},
@@ -29,6 +43,14 @@ local M = {
     files = {},
     being_modified = false
 }
+
+function M:setup(config)
+    if not config then return end
+    self.config = vim.tbl_deep_extend('force', self.config, config or {})
+
+    save_window.keybinds = self.config.save_confirmation.keybinds
+    rename_window.keybinds = self.config.rename.keybinds
+end
 
 local function gen_title(path)
     local title = vim.fn.fnamemodify(path, ':.')
@@ -54,12 +76,6 @@ local function set_list_to_buffer(list, listbuf, current_path)
     marker.set_manager_marks(listbuf, ns, utils.map(list, function(el)
         return vim.fn.fnamemodify(M.buffer_path .. '/' .. el, ':.')
     end))
-end
-
-function M:setup(config)
-    if not config then return end
-    self.config = vim.tbl_deep_extend('force', self.config, config)
-
 end
 
 function M:open()

@@ -1,7 +1,8 @@
 local data = require('handofgod.data')
 local utils = require('handofgod.utils')
 
-local M = {}
+local M = {
+}
 
 local function alter_jumper_list(old_name, new_name)
     local old_r = vim.fn.fnamemodify(old_name, ':.')
@@ -33,12 +34,12 @@ function M.spawn(name, path, callback)
         col = 0, row = 0
     })
 
-    vim.keymap.set({'n'}, '<Esc>', function()
+    vim.keymap.set({'n'}, M.keybinds.exit, function()
         vim.api.nvim_win_close(win, true)
         vim.api.nvim_buf_delete(buf, { force = true })
     end, {buffer = buf})
 
-    vim.keymap.set('n', 'q', function()
+    vim.keymap.set('n', M.keybinds.save_and_exit, function()
         local new_name = vim.api.nvim_buf_get_lines(buf, 0, 1, false)[1]
         local old_p = path .. name
         local new_p = path .. new_name
