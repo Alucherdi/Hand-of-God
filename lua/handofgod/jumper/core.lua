@@ -1,5 +1,7 @@
 local utils = require('handofgod.utils')
-local data = require('handofgod.data')
+
+local jumplist = require('handofgod.data.jumplist')
+
 local commons = require('handofgod.commons')
 local ns = vim.api.nvim_create_namespace('HOGJumperNS')
 
@@ -8,19 +10,19 @@ local M = {
 }
 
 function M.setup()
-    data.load()
-    data.ensure_dir()
+    jumplist.ensure_dir()
+    jumplist.load()
 end
 
 function M.add()
     local path = vim.fn.expand('%:.')
     if not path then return end
 
-    data.add(path)
+    jumplist.add(path)
 end
 
 function M.jump_to(index)
-    local element = data.list[index]
+    local element = jumplist.list[index]
     if element == nil then return end
 
     local path = element.key
@@ -31,15 +33,16 @@ end
 
 function M.rewrite(lines)
     utils.remove_empties(lines)
-    data.reorder_based_on(lines)
-    data.write()
+    jumplist.reorder_based_on(lines)
+    jumplist.write()
 end
 
 function M.explore()
     M.host = vim.api.nvim_get_current_win()
     local main = commons:create_window('Jumper')
 
-    local files = data.get_files()
+    local files = utils.map(jumplist.get_list(), function(v) return v.key end)
+
     vim.api.nvim_buf_set_lines(main.buf, 0, 1, false, files)
     commons.set_icons(main.buf, files, ns, vim.uv.cwd())
 

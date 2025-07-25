@@ -1,4 +1,4 @@
-local data = require('handofgod.data')
+local jumplist = require('handofgod.data.jumplist')
 
 vim.api.nvim_create_autocmd("BufEnter", {
     callback = function(args)
@@ -6,7 +6,7 @@ vim.api.nvim_create_autocmd("BufEnter", {
         file = vim.fn.fnamemodify(file, ':.')
         if vim.trim(file) == '' then return end
 
-        local cursor = data.get_cursor(file)
+        local cursor = jumplist.get_cursor(file)
         if not cursor then return end
 
         local _, _ = pcall(function() vim.api.nvim_win_set_cursor(0, cursor) end)
@@ -22,7 +22,7 @@ vim.api.nvim_create_autocmd("BufLeave", {
         if vim.trim(file) == '' then return end
 
         local cursor = vim.api.nvim_win_get_cursor(0)
-        data.set_cursor(file, cursor)
+        jumplist.set_cursor(file, cursor)
     end
 })
 
@@ -34,6 +34,6 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
 
         if vim.trim(file) == '' then return end
         local cursor = vim.api.nvim_win_get_cursor(0)
-        data.set_cursor(file, cursor)
+        jumplist.set_cursor(file, cursor)
     end
 })
