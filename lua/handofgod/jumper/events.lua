@@ -21,5 +21,6 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
         if vim.trim(file) == '' then return end
         local cursor = vim.api.nvim_win_get_cursor(0)
         jumplist.set_cursor(file, cursor)
+        jumplist.write()
     end
 })
