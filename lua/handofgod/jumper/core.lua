@@ -29,6 +29,7 @@ function M.jump_to(index)
     if path == vim.fn.expand('%') then return end
 
     vim.cmd('edit ' .. vim.fn.expand(path))
+    vim.api.nvim_win_set_cursor(0, element.cursor)
 end
 
 function M.rewrite(lines)

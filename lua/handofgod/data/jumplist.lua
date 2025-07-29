@@ -22,7 +22,6 @@ function M.load()
 
     pcall(function()
         M.list = vim.json.decode(content)
-        print(M.list)
         M.gen_map()
     end)
 end
@@ -31,7 +30,7 @@ function M.gen_map()
     M.map = {}
     for i, item in ipairs(M.list) do
         M.map[item.key] = {
-            key = item,
+            key = item.key,
             index = i,
             cursor = item.cursor,
         }
@@ -55,7 +54,7 @@ function M.get_cursor(path)
 end
 
 function M.set_cursor(path, cursor)
-    if M.map[path] then return end
+    if not M.map[path] then return end
     M.map[path].cursor = cursor
     M.list[M.map[path].index].cursor = cursor
 end
@@ -66,7 +65,6 @@ end
 
 function M.reorder_based_on(paths)
     M.list = {}
-    vim.print(paths)
     for _, v in ipairs(paths) do
         local el = M.map[v]
         local o = {
