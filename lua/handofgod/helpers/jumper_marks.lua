@@ -1,4 +1,4 @@
-local data = require('handofgod.data')
+local jumplist = require('handofgod.data.jumplist')
 local utils = require('handofgod.utils')
 
 local M = {
@@ -7,9 +7,9 @@ local M = {
 
 function M.set_manager_marks(buf, ns, paths)
     for i, v in ipairs(paths) do
-        local index = utils.index_of(data.list, v, 'key')
-        if index ~= -1 then
-            M.set_mark_at(buf, ns, i, index)
+        local el = jumplist.map[v]
+        if el then
+            M.set_mark_at(buf, ns, i, el.index)
         end
     end
 end
@@ -18,15 +18,15 @@ function M.set_searcher_marks(buf, ns)
     local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
     for i, v in ipairs(lines) do
-        local index = utils.index_of(data.list, v, 'key')
-        if index ~= -1 then
-            M.set_mark_at(buf, ns, i, index)
+        local el = jumplist.map[v]
+        if el then
+            M.set_mark_at(buf, ns, i, el.index)
         end
     end
 end
 
 function M.set_mark_at(buf, ns, index, jumper_index)
-    jumper_index = jumper_index or #data.list
+    jumper_index = jumper_index or #jumplist.list
     local current = M.marks[index]
 
     local opts = {
