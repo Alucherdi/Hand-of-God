@@ -3,6 +3,7 @@ local utils   = require('handofgod.utils')
 local save_window = require('handofgod.manager.save')
 local rename_window = require('handofgod.manager.rename')
 local data = require('handofgod.data')
+local jumplist = require('handofgod.data.jumplist')
 local marker = require('handofgod.helpers.jumper_marks')
 
 local ns = vim.api.nvim_create_namespace('HOGManagerNS')
@@ -92,9 +93,11 @@ function M:open()
     utils.kmap('n', M.config.keybinds.add_to_jump_list, function()
         local row = vim.api.nvim_win_get_cursor(0)[1]
         local path = vim.fn.fnamemodify(M.buffer_path .. '/' .. M.list[row], ':.')
-        local jumplist_index = utils.index_of(data.list, path, 'key')
+        local jumplist_index = jumplist.get_index(path)
+        --utils.index_of(data.list, path, 'key')
         if jumplist_index ~= -1 then
-            table.remove(data.list, jumplist_index)
+            --table.remove(data.list, jumplist_index)
+            jumplist.remove(path)
             marker.remove_mark_at(M.mod.buf, ns, row)
             marker.set_manager_marks(M.mod.buf, ns, utils.map(M.list, function(el)
                 return vim.fn.fnamemodify(M.buffer_path .. '/' .. el, ':.')
@@ -102,7 +105,7 @@ function M:open()
             return
         end
 
-        data.add(path)
+        jumplist.add(path)
         marker.set_mark_at(M.mod.buf, ns, row)
     end, {buffer = M.mod.buf})
 
@@ -204,14 +207,11 @@ function M.manage(additions, subtractions)
         if file_path:sub(-1) == '/' then
             for index, v in ipairs(data.list) do
                 if v.key:match('^' .. relative) then
-                    data.list[index] = nil
+                    jumplist.remove_by_index(index)
                 end
             end
         else
-            local index = utils.index_of(data.list, relative, 'key')
-            if index ~= -1 then
-                data.list[index] = nil
-            end
+            jumplist.remove(relative)
         end
     end
 end

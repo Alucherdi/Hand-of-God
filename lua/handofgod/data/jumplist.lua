@@ -37,6 +37,10 @@ function M.gen_map()
     end
 end
 
+function M.get_index(path)
+    return (M.map[path] or {index = -1}).index
+end
+
 function M.add(el)
     if M.map[el] then return end
     local ob = {
@@ -47,6 +51,18 @@ function M.add(el)
     table.insert(M.list, ob)
     ob.index = #M.list
     M.map[el] = ob
+end
+
+function M.remove(path)
+    local el = M.map[path]
+    if not el then return end
+    table.remove(M.list, el.index)
+    M.gen_map()
+end
+
+function M.remove_by_index(index)
+    table.remove(M.list, index)
+    M.gen_map()
 end
 
 function M.get_cursor(path)

@@ -8,7 +8,6 @@ local M = {
 }
 
 function M.stop()
-    print('being stopped')
     if M.process then
         M.process:kill(9)
         M.process = nil
