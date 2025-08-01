@@ -4,7 +4,7 @@ local command = 'fd -c never -tf -I'
 
 local marker = require('handofgod.helpers.jumper_marks')
 
-local data = require('handofgod.data')
+local jumplist = require('handofgod.data.jumplist')
 local ns = vim.api.nvim_create_namespace('HOGSearcherNS')
 
 local M = {
@@ -106,15 +106,16 @@ function M.manage_prompt(main, prompt)
     end, {buffer = prompt.buf})
 
     utils.kmap('i', '<C-a>', function()
-        local index = utils.index_of(data.list, M.list[M.index], 'key')
-        if index ~= -1 then
-            table.remove(data.list, index)
+        local path = M.list[M.index]
+
+        if jumplist.map[path] then
+            jumplist.remove(path)
             marker.remove_mark_at(main.buf, ns, M.index)
             marker.set_searcher_marks(main.buf, ns)
             return
         end
 
-        data.add(M.list[M.index])
+        jumplist.add(path)
         marker.set_mark_at(main.buf, ns, M.index)
     end, {buffer = prompt.buf})
 
