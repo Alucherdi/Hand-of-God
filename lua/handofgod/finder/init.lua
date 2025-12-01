@@ -14,6 +14,9 @@ function M.setup(config)
 end
 
 function M.open()
+    if _G.hog_module_loaded then return end
+    _G.hog_module_loaded = true
+
     M.prompt, M.main = commons.create_prompted_window('Greper', '')
     M.main.list = { size = 0 }
 
@@ -27,7 +30,9 @@ function M.close()
     M.close_module(M.prompt)
     M.close_module(M.main)
 
+
     vim.api.nvim_input("<esc>")
+    _G.hog_module_loaded = false
 end
 
 function M.close_module(module)
@@ -38,6 +43,9 @@ function M.close_module(module)
     if vim.api.nvim_win_is_valid(module.win) then
         vim.api.nvim_win_close(module.win, true)
     end
+
+    module.buf = nil
+    module.win = nil
 end
 
 function M.abort()

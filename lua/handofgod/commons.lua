@@ -23,6 +23,8 @@ local function get_offset()
 end
 
 function M.create_prompted_window(prompt_title, main_title)
+    _G.hog_module_loaded = true
+
     local x, py = get_offset()
     local w, h = M.win_size()
     local y = py + 2
@@ -76,6 +78,7 @@ function M.create_prompted_window(prompt_title, main_title)
 end
 
 function M:create_window(title)
+    _G.hog_module_loaded = true
     local x, y = get_offset()
     local w, h = M.win_size()
     w = w - (x * 2)
@@ -150,6 +153,7 @@ function M.close(mod)
         vim.api.nvim_buf_delete(mod.buf, { force = true })
     end
 
+    _G.hog_module_loaded = false
     mod.win = nil
     mod.buf = nil
     mod.is_active = false

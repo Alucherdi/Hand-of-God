@@ -29,6 +29,9 @@ end
 
 
 function M:open()
+    if _G.hog_module_loaded then return end
+    _G.hog_module_loaded = true
+
     M.host = vim.api.nvim_get_current_win()
     M.original = M.get_files()
     M.list = M.original

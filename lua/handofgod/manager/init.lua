@@ -80,6 +80,8 @@ local function set_list_to_buffer(list, listbuf, current_path)
 end
 
 function M:open()
+    if _G.hog_module_loaded then return end
+
     M.buffer_path = vim.fn.expand('%:p:h')
 
     M.host = vim.api.nvim_get_current_win()
